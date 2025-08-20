@@ -5,7 +5,7 @@ pydantic==2.11.7
 pydantic-settings==2.10.1
 pydantic-ai-slim[openai]==0.7.4
 mcp[cli]==1.13.0
-# mem0 - package unavailable on PyPI
+mem0ai==0.1.116
 qdrant-client==1.15.1
 redis==6.4.0
 SQLAlchemy==2.0.43

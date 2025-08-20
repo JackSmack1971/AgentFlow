@@ -17,17 +17,32 @@ except ModuleNotFoundError:  # pragma: no cover
 
 MEM0_MODE = os.getenv("MEM0_MODE", "oss")
 if Memory is not None and MemoryClient is not None:
-    if MEM0_MODE == "hosted":
-        _backend = MemoryClient(api_key=os.getenv("MEM0_API_KEY"))
-    else:
-        _backend = Memory.from_config(
-            {
-                "vector_store": {"provider": "qdrant", "config": {"host": "localhost", "port": 6333}},
-                "llm": {"provider": "openai", "config": {"api_key": os.getenv("OPENAI_API_KEY", ""), "model": "gpt-4o-mini"}},
-                "embedder": {"provider": "openai", "config": {"api_key": os.getenv("OPENAI_API_KEY", ""), "model": "text-embedding-3-small"}},
-                "version": "v1.1",
-            }
-        )
+    try:
+        if MEM0_MODE == "hosted":
+            _backend = MemoryClient(api_key=os.getenv("MEM0_API_KEY"))
+        else:
+            _backend = Memory.from_config(
+                {
+                    "vector_store": {"provider": "qdrant", "config": {"host": "localhost", "port": 6333}},
+                    "llm": {
+                        "provider": "openai",
+                        "config": {
+                            "api_key": os.getenv("OPENAI_API_KEY", ""),
+                            "model": "gpt-4o-mini",
+                        },
+                    },
+                    "embedder": {
+                        "provider": "openai",
+                        "config": {
+                            "api_key": os.getenv("OPENAI_API_KEY", ""),
+                            "model": "text-embedding-3-small",
+                        },
+                    },
+                    "version": "v1.1",
+                }
+            )
+    except Exception:  # pragma: no cover
+        _backend = None
 else:  # pragma: no cover
     _backend = None
 
@@ -143,6 +158,8 @@ class MemoryService:
         scope: Optional[MemoryScope] = None,
         tags: Optional[List[str]] = None,
     ) -> List[MemoryItem]:
+        if not query:
+            raise ValueError("query must not be empty")
         self._purge()
         results: List[MemoryItem] = []
         try:
