@@ -39,3 +39,7 @@ class InvalidCredentialsError(AuthenticationError):
 
 class TokenError(AuthenticationError):
     """Raised when token generation or validation fails."""
+
+
+class CacheError(AgentFlowError):
+    """Raised when cache operations fail."""
