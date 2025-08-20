@@ -1,13 +1,32 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from .config import get_settings
 from .middleware import AuditMiddleware
+from .rate_limiter import limiter
 from .routers import agents, auth, cache_examples, health, memory, rag
 from .utils.logging import setup_logging
+
+
+class RateLimitError(Exception):
+    """Raised when handling a rate limit response fails."""
+
+
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """Return a JSON response for rate limit violations."""
+    try:
+        return JSONResponse(status_code=429, content={"detail": "Too many requests"})
+    except Exception as err:  # pragma: no cover - safety
+        raise RateLimitError("Rate limit handler failed") from err
 
 settings = get_settings()
 setup_logging(settings.log_level)
 app = FastAPI(title=settings.app_name, openapi_url=settings.openapi_url)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(AuditMiddleware)
 
 # Routers

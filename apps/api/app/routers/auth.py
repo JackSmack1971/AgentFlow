@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Request
+from ..rate_limiter import limiter
 from loguru import logger
 
 from ..exceptions import InvalidCredentialsError, OTPError, TokenError
@@ -20,7 +21,8 @@ router = APIRouter()
 
 
 @router.post("/register", status_code=201, response_model=RegisterResponse)
-async def register(user: UserCreate) -> RegisterResponse:
+@limiter.limit("5/minute")
+async def register(request: Request, user: UserCreate) -> RegisterResponse:
     try:
         secret = await auth_service.register_user(user.email, user.password)
     except InvalidCredentialsError as exc:
@@ -29,7 +31,8 @@ async def register(user: UserCreate) -> RegisterResponse:
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: LoginRequest) -> TokenResponse:
+@limiter.limit("5/minute")
+async def login(request: Request, credentials: LoginRequest) -> TokenResponse:
     try:
         await auth_service.authenticate_user(
             credentials.email, credentials.password, credentials.otp_code
@@ -47,7 +50,8 @@ async def login(credentials: LoginRequest) -> TokenResponse:
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(token: RefreshRequest) -> TokenResponse:
+@limiter.limit("5/minute")
+async def refresh(request: Request, token: RefreshRequest) -> TokenResponse:
     try:
         if await auth_service.is_refresh_token_blacklisted(token.refresh_token):
             raise TokenError("Invalid refresh token")
@@ -63,7 +67,8 @@ async def refresh(token: RefreshRequest) -> TokenResponse:
 
 
 @router.post("/logout")
-async def logout(token: RefreshRequest) -> dict:
+@limiter.limit("5/minute")
+async def logout(request: Request, token: RefreshRequest) -> dict:
     try:
         if await auth_service.is_refresh_token_blacklisted(token.refresh_token):
             raise TokenError("Invalid refresh token")
@@ -75,17 +80,21 @@ async def logout(token: RefreshRequest) -> dict:
 
 
 @router.post("/reset", response_model=ResetResponse)
-async def reset(request: ResetRequest) -> ResetResponse:
+@limiter.limit("5/minute")
+async def reset(request: Request, payload: ResetRequest) -> ResetResponse:
     try:
-        token = await auth_service.generate_reset_token(request.email)
-        logger.info("password reset requested", email=request.email)
+        token = await auth_service.generate_reset_token(payload.email)
+        logger.info("password reset requested", email=payload.email)
         return ResetResponse(reset_token=token)
     except InvalidCredentialsError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
 
 @router.get("/me", response_model=UserInfo)
-async def me(authorization: Annotated[str | None, Header()] = None) -> UserInfo:
+@limiter.limit("5/minute")
+async def me(
+    request: Request, authorization: Annotated[str | None, Header()] = None
+) -> UserInfo:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Not authenticated")
     token = authorization.split(" ", 1)[1]
