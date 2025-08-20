@@ -7,6 +7,7 @@ import uuid
 import fakeredis.aioredis
 import pytest
 from httpx import ASGITransport, AsyncClient, Response
+from typing import Iterator
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 
@@ -84,6 +85,13 @@ def override_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     cache = Cache(fake)
     monkeypatch.setattr(token_store, "get_cache", lambda: cache)
     yield
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter() -> Iterator[None]:
+    app.state.limiter.reset()
+    yield
+    app.state.limiter.reset()
 
 
 @pytest.mark.asyncio
@@ -211,6 +219,18 @@ async def test_login_invalid_otp() -> None:
         )
         assert_correlation_id(resp)
         assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_exceeded() -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        for _ in range(5):
+            await ac.post("/auth/refresh", json={"refresh_token": "bad"})
+        resp = await ac.post("/auth/refresh", json={"refresh_token": "bad"})
+        assert_correlation_id(resp)
+        assert resp.status_code == 429
+        assert resp.json()["detail"] == "Too many requests"
 
 
 @pytest.mark.asyncio
