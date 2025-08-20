@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from .config import get_settings
 from .middleware import AuditMiddleware
-from .routers import agents, auth, health, memory, rag
+from .routers import agents, auth, cache_examples, health, memory, rag
 from .utils.logging import setup_logging
 
 settings = get_settings()
@@ -16,3 +16,4 @@ app.include_router(memory.router, prefix="/memory", tags=["memory"])
 app.include_router(rag.router, prefix="/rag", tags=["rag"])
 app.include_router(agents.router, prefix="/agents", tags=["agents"])
 app.include_router(health.router)
+app.include_router(cache_examples.router, tags=["cache"])

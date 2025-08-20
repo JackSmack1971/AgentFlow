@@ -25,6 +25,8 @@ dependencies = [
   "pytest-asyncio>=0.23",
   "respx>=0.20",
   "pyjwt",
+  "tenacity>=8.2",
+  "fakeredis>=2.23",
 ]
 
 [tool.uv]
