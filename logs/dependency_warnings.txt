@@ -1,0 +1,14 @@
+$ pip list --outdated
+Package       Version Latest Type
+------------- ------- ------ -----
+pydantic_core 2.33.2  2.39.0 wheel
+ruff          0.12.7  0.12.9 wheel
+
+$ pytest -q --disable-warnings
+...s..                                                                                                                   [100%]
+5 passed, 7 skipped, 1 warning in 3.33s
+/root/.pyenv/versions/3.12.10/lib/python3.12/site-packages/pytest_asyncio/plugin.py:211: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+
