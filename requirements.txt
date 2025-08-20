@@ -1,3 +1,4 @@
+pytest-cov
 email-validator==2.2.0
 aiosqlite==0.21.0
 fastapi==0.115.12  # pinned for r2r compatibility
