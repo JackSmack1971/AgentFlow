@@ -19,6 +19,7 @@ from apps.api.app import config
 from apps.api.app.core.cache import Cache
 from apps.api.app.main import app
 from apps.api.app.services import auth as auth_service
+from apps.api.app.services import token_store
 
 
 # Stub heavy dependencies
@@ -73,7 +74,8 @@ config.get_settings.cache_clear()
 @pytest.fixture(autouse=True)
 def override_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     fake = fakeredis.aioredis.FakeRedis(decode_responses=True)
-    monkeypatch.setattr(auth_service, "get_cache", lambda: Cache(fake))
+    cache = Cache(fake)
+    monkeypatch.setattr(token_store, "get_cache", lambda: cache)
     yield
 
 
@@ -117,6 +119,26 @@ async def test_refresh_rotation() -> None:
         assert replay.status_code == 401
         second = await ac.post("/auth/refresh", json={"refresh_token": token2})
         assert second.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_logout_blacklists_token() -> None:
+    auth_service.USERS.clear()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        await ac.post(
+            "/auth/register",
+            json={"email": "a@b.com", "password": "Password1!"},
+        )
+        login = await ac.post(
+            "/auth/login",
+            json={"email": "a@b.com", "password": "Password1!"},
+        )
+        token = login.json()["refresh_token"]
+        resp = await ac.post("/auth/logout", json={"refresh_token": token})
+        assert resp.status_code == 200
+        rejected = await ac.post("/auth/refresh", json={"refresh_token": token})
+        assert rejected.status_code == 401
 
 
 @pytest.mark.asyncio

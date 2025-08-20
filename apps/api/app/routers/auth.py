@@ -1,4 +1,3 @@
-"""Authentication router."""
 from fastapi import APIRouter, HTTPException
 
 from ..exceptions import InvalidCredentialsError, TokenError
@@ -34,6 +33,8 @@ async def login(credentials: LoginRequest) -> TokenResponse:
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(token: RefreshRequest) -> TokenResponse:
     try:
+        if await auth_service.is_refresh_token_blacklisted(token.refresh_token):
+            raise TokenError("Invalid refresh token")
         subject = await auth_service.decode_token(token.refresh_token)
         await auth_service.verify_refresh_token(token.refresh_token)
         access = await auth_service.create_access_token(subject)
@@ -41,5 +42,17 @@ async def refresh(token: RefreshRequest) -> TokenResponse:
         await auth_service.store_refresh_token(new_refresh, subject)
         await auth_service.revoke_refresh_token(token.refresh_token)
         return TokenResponse(access_token=access, refresh_token=new_refresh)
+    except TokenError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+
+@router.post("/logout")
+async def logout(token: RefreshRequest) -> dict:
+    try:
+        if await auth_service.is_refresh_token_blacklisted(token.refresh_token):
+            raise TokenError("Invalid refresh token")
+        await auth_service.verify_refresh_token(token.refresh_token)
+        await auth_service.revoke_refresh_token(token.refresh_token)
+        return {"status": "ok"}
     except TokenError as exc:
         raise HTTPException(status_code=401, detail=str(exc))
