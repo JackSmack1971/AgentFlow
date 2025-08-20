@@ -77,12 +77,12 @@ async def test_register_and_login() -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.post(
             "/auth/register",
-            json={"email": "a@b.com", "password": "Password1"},
+            json={"email": "a@b.com", "password": "Password1!"},
         )
         assert resp.status_code == 201
         resp = await ac.post(
             "/auth/login",
-            json={"email": "a@b.com", "password": "Password1"},
+            json={"email": "a@b.com", "password": "Password1!"},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -90,7 +90,7 @@ async def test_register_and_login() -> None:
 
 
 @pytest.mark.asyncio
-async def test_register_bad_password() -> None:
+async def test_register_password_too_short() -> None:
     auth_service.USERS.clear()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -102,17 +102,41 @@ async def test_register_bad_password() -> None:
 
 
 @pytest.mark.asyncio
+async def test_register_password_missing_uppercase() -> None:
+    auth_service.USERS.clear()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post(
+            "/auth/register",
+            json={"email": "a@b.com", "password": "password1!"},
+        )
+        assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_register_password_banned() -> None:
+    auth_service.USERS.clear()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post(
+            "/auth/register",
+            json={"email": "a@b.com", "password": "password"},
+        )
+        assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_login_invalid_credentials() -> None:
     auth_service.USERS.clear()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         await ac.post(
             "/auth/register",
-            json={"email": "a@b.com", "password": "Password1"},
+            json={"email": "a@b.com", "password": "Password1!"},
         )
         resp = await ac.post(
             "/auth/login",
-            json={"email": "a@b.com", "password": "WrongPass1"},
+            json={"email": "a@b.com", "password": "WrongPass1!"},
         )
         assert resp.status_code == 401
 
@@ -124,11 +148,11 @@ async def test_refresh() -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         await ac.post(
             "/auth/register",
-            json={"email": "a@b.com", "password": "Password1"},
+            json={"email": "a@b.com", "password": "Password1!"},
         )
         login = await ac.post(
             "/auth/login",
-            json={"email": "a@b.com", "password": "Password1"},
+            json={"email": "a@b.com", "password": "Password1!"},
         )
         refresh_token = login.json()["refresh_token"]
         resp = await ac.post("/auth/refresh", json={"refresh_token": refresh_token})
