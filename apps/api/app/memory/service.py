@@ -17,13 +17,22 @@ except ModuleNotFoundError:  # pragma: no cover
 
 MEM0_MODE = os.getenv("MEM0_MODE", "oss")
 if Memory is not None and MemoryClient is not None:
-    try:
-        if MEM0_MODE == "hosted":
-            _backend = MemoryClient(api_key=os.getenv("MEM0_API_KEY"))
-        else:
+    if MEM0_MODE == "hosted":
+        api_key = os.getenv("MEM0_API_KEY")
+        if not api_key:
+            raise MemoryServiceError("MEM0_API_KEY is required for hosted mode")
+        try:
+            _backend = MemoryClient(api_key=api_key)
+        except Exception:  # pragma: no cover
+            _backend = None
+    else:
+        try:
             _backend = Memory.from_config(
                 {
-                    "vector_store": {"provider": "qdrant", "config": {"host": "localhost", "port": 6333}},
+                    "vector_store": {
+                        "provider": "qdrant",
+                        "config": {"host": "localhost", "port": 6333},
+                    },
                     "llm": {
                         "provider": "openai",
                         "config": {
@@ -41,8 +50,8 @@ if Memory is not None and MemoryClient is not None:
                     "version": "v1.1",
                 }
             )
-    except Exception:  # pragma: no cover
-        _backend = None
+        except Exception:  # pragma: no cover
+            _backend = None
 else:  # pragma: no cover
     _backend = None
 
