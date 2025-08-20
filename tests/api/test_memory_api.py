@@ -2,10 +2,7 @@ import os
 import pathlib
 import sys
 import types
-from typing import List
 import pytest
-
-pytest.skip("API tests not yet supported", allow_module_level=True)
 
 from httpx import AsyncClient, ASGITransport
 
