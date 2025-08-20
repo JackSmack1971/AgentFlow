@@ -209,9 +209,10 @@ sequenceDiagram
    # Using uv (recommended)
    pip install uv
    uv install
-   
+
    # Or using pip
    pip install -e .
+   pip install mem0ai
    ```
 
 5. **Start the services**
