@@ -27,6 +27,7 @@ dependencies = [
   "pyjwt",
   "tenacity>=8.2",
   "fakeredis>=2.23",
+  "pyotp>=2.9",
 ]
 
 [tool.uv]

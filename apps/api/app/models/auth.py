@@ -9,7 +9,7 @@ class UserCreate(BaseModel):
 
 
 class LoginRequest(UserCreate):
-    pass
+    otp_code: str
 
 
 class RefreshRequest(BaseModel):
@@ -32,3 +32,8 @@ class ResetResponse(BaseModel):
 
 class UserInfo(BaseModel):
     email: EmailStr
+
+
+class RegisterResponse(BaseModel):
+    otp_secret: str
+    status: str = "ok"

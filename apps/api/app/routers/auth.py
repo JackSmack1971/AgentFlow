@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Header
 from loguru import logger
 
-from ..exceptions import InvalidCredentialsError, TokenError
+from ..exceptions import InvalidCredentialsError, OTPError, TokenError
 from ..models.auth import (
     LoginRequest,
     RefreshRequest,
@@ -12,30 +12,35 @@ from ..models.auth import (
     TokenResponse,
     UserCreate,
     UserInfo,
+    RegisterResponse,
 )
 from ..services import auth as auth_service
 
 router = APIRouter()
 
 
-@router.post("/register", status_code=201)
-async def register(user: UserCreate) -> dict:
+@router.post("/register", status_code=201, response_model=RegisterResponse)
+async def register(user: UserCreate) -> RegisterResponse:
     try:
-        await auth_service.register_user(user.email, user.password)
+        secret = await auth_service.register_user(user.email, user.password)
     except InvalidCredentialsError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    return {"status": "ok"}
+    return RegisterResponse(otp_secret=secret)
 
 
 @router.post("/login", response_model=TokenResponse)
 async def login(credentials: LoginRequest) -> TokenResponse:
     try:
-        await auth_service.authenticate_user(credentials.email, credentials.password)
+        await auth_service.authenticate_user(
+            credentials.email, credentials.password, credentials.otp_code
+        )
         access = await auth_service.create_access_token(credentials.email)
         refresh = await auth_service.create_refresh_token(credentials.email)
         await auth_service.store_refresh_token(refresh, credentials.email)
         return TokenResponse(access_token=access, refresh_token=refresh)
     except InvalidCredentialsError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+    except OTPError as exc:
         raise HTTPException(status_code=401, detail=str(exc))
     except TokenError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
