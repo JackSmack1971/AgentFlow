@@ -1,0 +1,45 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agentflow
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ["6333:6333"]
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-password}
+    ports: ["7474:7474", "7687:7687"]
+
+  r2r:
+    image: sciphi/r2r:latest
+    environment:
+      - R2R_CONFIG_NAME=full
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports: ["7272:7272"]
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  qdrant_storage: {}

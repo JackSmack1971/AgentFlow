@@ -1,0 +1,17 @@
+[database]
+provider = "postgres"
+user = "postgres"
+password = "postgres"
+host = "localhost"
+port = 5432
+db_name = "r2r"
+
+[embedding]
+provider = "openai"
+model = "text-embedding-3-small"
+dimension = 1536
+
+[llm]
+provider = "openai"
+model = "gpt-4o-mini"
+temperature = 0.0
