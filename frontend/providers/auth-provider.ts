@@ -1,3 +1,5 @@
+"use client";
+
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import ApiClient from '../lib/api.ts';
 import { z } from 'zod';
