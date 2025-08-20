@@ -4,6 +4,7 @@ import sys
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+import types
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 from apps.api.app import config
@@ -14,6 +15,47 @@ os.environ.setdefault("OPENAI_API_KEY", "test")
 os.environ.setdefault("SECRET_KEY", "test")
 os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
 config.get_settings.cache_clear()
+mock_ai = types.ModuleType("pydantic_ai")
+class DummyAgent:
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        self.settings = None
+
+    async def run(self, prompt: str):  # pragma: no cover - stub
+        class R:
+            output_text = ""
+
+        return R()
+
+
+class DummyModelSettings:
+    def __init__(self, **kwargs: object) -> None:
+        pass
+
+
+mock_ai.Agent = DummyAgent
+models_mod = types.ModuleType("pydantic_ai.models")
+models_mod.ModelSettings = DummyModelSettings
+sys.modules["pydantic_ai"] = mock_ai
+sys.modules["pydantic_ai.models"] = models_mod
+
+
+class DummyConn:
+    async def execute(self, *args: object, **kwargs: object) -> None:
+        return None
+
+    async def close(self) -> None:  # pragma: no cover - stub
+        return None
+
+
+class DummyAsyncConnection:
+    @staticmethod
+    async def connect(dsn: str) -> DummyConn:  # pragma: no cover - stub
+        return DummyConn()
+
+
+mock_psycopg = types.ModuleType("psycopg")
+mock_psycopg.AsyncConnection = DummyAsyncConnection
+sys.modules["psycopg"] = mock_psycopg
 
 from apps.api.app.main import app
 
