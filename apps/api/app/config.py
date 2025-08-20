@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     r2r_base_url: str = "http://localhost:7272"
     r2r_api_key: str | None = None
     log_level: str = "INFO"
+    password_min_length: int = 8
+    access_token_ttl_minutes: int = 15
+    refresh_token_ttl_minutes: int = 60 * 24
 
 
 @lru_cache()
