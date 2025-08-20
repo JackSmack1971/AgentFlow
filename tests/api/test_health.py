@@ -7,13 +7,15 @@ from httpx import ASGITransport, AsyncClient
 import types
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
-from apps.api.app import config
 
 os.environ.setdefault("DATABASE_URL", "postgresql://localhost/test")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("OPENAI_API_KEY", "test")
 os.environ.setdefault("SECRET_KEY", "test")
 os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
+
+from apps.api.app import config
+
 config.get_settings.cache_clear()
 mock_ai = types.ModuleType("pydantic_ai")
 class DummyAgent:

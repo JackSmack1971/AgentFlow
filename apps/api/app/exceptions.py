@@ -27,3 +27,15 @@ class RBACError(AgentFlowError):
 
 class SeedError(AgentFlowError):
     """Raised when database seeding operations fail."""
+
+
+class AuthenticationError(AgentFlowError):
+    """Raised when authentication fails."""
+
+
+class InvalidCredentialsError(AuthenticationError):
+    """Raised when user credentials are invalid."""
+
+
+class TokenError(AuthenticationError):
+    """Raised when token generation or validation fails."""
