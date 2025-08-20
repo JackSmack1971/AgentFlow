@@ -1,13 +1,11 @@
 import os
 import pathlib
 import sys
-import pytest
-
-pytest.skip("API tests not yet supported", allow_module_level=True)
-
-from httpx import ASGITransport, AsyncClient
-
 import types
+
+import fakeredis.aioredis
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 
@@ -18,7 +16,12 @@ os.environ.setdefault("SECRET_KEY", "test")
 os.environ.setdefault("OPENAI_API_KEY", "test")
 
 from apps.api.app import config
+from apps.api.app.core.cache import Cache
+from apps.api.app.main import app
+from apps.api.app.services import auth as auth_service
 
+
+# Stub heavy dependencies
 mock_ai = types.ModuleType("pydantic_ai")
 
 
@@ -64,10 +67,14 @@ class DummyAsyncConnection:
 mock_psycopg.AsyncConnection = DummyAsyncConnection
 sys.modules["psycopg"] = mock_psycopg
 
-from apps.api.app.services import auth as auth_service
-from apps.api.app.main import app
-
 config.get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def override_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    monkeypatch.setattr(auth_service, "get_cache", lambda: Cache(fake))
+    yield
 
 
 @pytest.mark.asyncio
@@ -87,6 +94,53 @@ async def test_register_and_login() -> None:
         assert resp.status_code == 200
         data = resp.json()
         assert "access_token" in data and "refresh_token" in data
+
+
+@pytest.mark.asyncio
+async def test_refresh_rotation() -> None:
+    auth_service.USERS.clear()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        await ac.post(
+            "/auth/register",
+            json={"email": "a@b.com", "password": "Password1!"},
+        )
+        login = await ac.post(
+            "/auth/login",
+            json={"email": "a@b.com", "password": "Password1!"},
+        )
+        token1 = login.json()["refresh_token"]
+        first = await ac.post("/auth/refresh", json={"refresh_token": token1})
+        assert first.status_code == 200
+        token2 = first.json()["refresh_token"]
+        replay = await ac.post("/auth/refresh", json={"refresh_token": token1})
+        assert replay.status_code == 401
+        second = await ac.post("/auth/refresh", json={"refresh_token": token2})
+        assert second.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_refresh_invalid_token() -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post("/auth/refresh", json={"refresh_token": "bad"})
+        assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_login_invalid_credentials() -> None:
+    auth_service.USERS.clear()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        await ac.post(
+            "/auth/register",
+            json={"email": "a@b.com", "password": "Password1!"},
+        )
+        resp = await ac.post(
+            "/auth/login",
+            json={"email": "a@b.com", "password": "WrongPass1!"},
+        )
+        assert resp.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -123,47 +177,3 @@ async def test_register_password_banned() -> None:
             json={"email": "a@b.com", "password": "password"},
         )
         assert resp.status_code == 400
-
-
-@pytest.mark.asyncio
-async def test_login_invalid_credentials() -> None:
-    auth_service.USERS.clear()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        await ac.post(
-            "/auth/register",
-            json={"email": "a@b.com", "password": "Password1!"},
-        )
-        resp = await ac.post(
-            "/auth/login",
-            json={"email": "a@b.com", "password": "WrongPass1!"},
-        )
-        assert resp.status_code == 401
-
-
-@pytest.mark.asyncio
-async def test_refresh() -> None:
-    auth_service.USERS.clear()
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        await ac.post(
-            "/auth/register",
-            json={"email": "a@b.com", "password": "Password1!"},
-        )
-        login = await ac.post(
-            "/auth/login",
-            json={"email": "a@b.com", "password": "Password1!"},
-        )
-        refresh_token = login.json()["refresh_token"]
-        resp = await ac.post("/auth/refresh", json={"refresh_token": refresh_token})
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["access_token"] and data["refresh_token"]
-
-
-@pytest.mark.asyncio
-async def test_refresh_invalid_token() -> None:
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.post("/auth/refresh", json={"refresh_token": "bad"})
-        assert resp.status_code == 401
