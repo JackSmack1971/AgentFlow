@@ -1,3 +1,4 @@
+aiosqlite
 fastapi==0.115.12  # pinned for r2r compatibility
 uvicorn[standard]==0.35.0
 python-dotenv==1.1.1
