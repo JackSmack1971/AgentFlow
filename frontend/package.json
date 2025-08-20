@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "ts-node --esm lib/api.test.ts && ts-node --esm providers/auth-provider.test.ts"
+    "test": "ts-node --esm lib/api.test.ts && ts-node --esm providers/auth-provider.test.ts && ts-node --esm providers/theme-provider.test.ts && ts-node --esm components/layout/error-boundary.test.ts && ts-node --esm components/layout/navigation.test.ts && ts-node --esm app/root-layout.test.ts"
   },
   "dependencies": {
     "next": "latest",
