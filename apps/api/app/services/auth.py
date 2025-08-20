@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime, timedelta
-from typing import Dict, Callable, Iterable
+from typing import Callable, Dict, Iterable
+from uuid import uuid4
 
 import jwt
 
 from .. import config
-from ..exceptions import InvalidCredentialsError, TokenError
+from ..core.cache import get_cache
+from ..exceptions import CacheError, InvalidCredentialsError, TokenError
 
 settings = config.get_settings()
 USERS: Dict[str, str] = {}
@@ -66,9 +68,8 @@ async def authenticate_user(email: str, password: str) -> bool:
 async def create_access_token(subject: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.access_token_ttl_minutes)
     try:
-        return jwt.encode(
-            {"sub": subject, "exp": expire}, settings.secret_key, algorithm="HS256"
-        )
+        payload = {"sub": subject, "exp": expire, "jti": uuid4().hex}
+        return jwt.encode(payload, settings.secret_key, algorithm="HS256")
     except jwt.PyJWTError as exc:  # pragma: no cover - library failure
         raise TokenError("Could not create access token") from exc
 
@@ -76,9 +77,8 @@ async def create_access_token(subject: str) -> str:
 async def create_refresh_token(subject: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.refresh_token_ttl_minutes)
     try:
-        return jwt.encode(
-            {"sub": subject, "exp": expire}, settings.secret_key, algorithm="HS256"
-        )
+        payload = {"sub": subject, "exp": expire, "jti": uuid4().hex}
+        return jwt.encode(payload, settings.secret_key, algorithm="HS256")
     except jwt.PyJWTError as exc:  # pragma: no cover - library failure
         raise TokenError("Could not create refresh token") from exc
 
@@ -89,3 +89,35 @@ async def decode_token(token: str) -> str:
         return payload["sub"]
     except jwt.PyJWTError as exc:
         raise TokenError("Invalid token") from exc
+
+
+def _refresh_key(token: str) -> str:
+    return f"refresh:{token}"
+
+
+async def store_refresh_token(token: str, subject: str) -> None:
+    cache = get_cache()
+    ttl = settings.refresh_token_ttl_minutes * 60
+    try:
+        await cache.set(_refresh_key(token), subject, ttl=ttl)
+    except CacheError as exc:  # pragma: no cover - network failure
+        raise TokenError("Could not store refresh token") from exc
+
+
+async def verify_refresh_token(token: str) -> str:
+    cache = get_cache()
+    try:
+        subject = await cache.get(_refresh_key(token))
+    except CacheError as exc:  # pragma: no cover - network failure
+        raise TokenError("Could not verify refresh token") from exc
+    if not subject:
+        raise TokenError("Invalid refresh token")
+    return subject
+
+
+async def revoke_refresh_token(token: str) -> None:
+    cache = get_cache()
+    try:
+        await cache.client.delete(_refresh_key(token))
+    except Exception as exc:  # pragma: no cover - network failure
+        raise TokenError("Could not revoke refresh token") from exc
