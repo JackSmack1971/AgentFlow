@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     password_min_length: int = 8
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_minutes: int = 60 * 24
+    agent_run_timeout_seconds: int = 30
+    agent_retry_max_attempts: int = 3
+    agent_retry_backoff_seconds: float = 1.0
 
 
 @lru_cache()
