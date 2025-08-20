@@ -1,8 +1,13 @@
 import pytest
+from datetime import timedelta
 
 from apps.api.app.memory.service import memory_service as mem_service
-from apps.api.app.memory.exceptions import MemoryServiceError
-from apps.api.app.memory.models import MemoryItemCreate
+from apps.api.app.memory.exceptions import MemoryNotFoundError, MemoryServiceError
+from apps.api.app.memory.models import (
+    MemoryItemCreate,
+    MemoryItemUpdate,
+    MemoryScope,
+)
 
 class DummyBackend:
     def add(self, *_, **__):
@@ -75,3 +80,83 @@ async def test_search_error(monkeypatch) -> None:
 async def test_search_validation() -> None:
     with pytest.raises(ValueError):
         await mem_service.search_items("")
+
+
+@pytest.mark.asyncio
+async def test_search_backend_success(monkeypatch) -> None:
+    monkeypatch.setattr(mem_service, "backend", DummyBackend())
+    mem_service._items.clear()
+    await mem_service.add_item(MemoryItemCreate(text="hi", user_id="u"))
+    results = await mem_service.search_items("hi")
+    assert results and results[0].id == "1"
+
+
+@pytest.mark.asyncio
+async def test_get_list_and_purge(monkeypatch) -> None:
+    monkeypatch.setattr(mem_service, "backend", None)
+    mem_service._items.clear()
+    item = await mem_service.add_item(MemoryItemCreate(text="hi", user_id="u", tags=["a"]))
+    await mem_service.add_item(
+        MemoryItemCreate(text="bye", user_id="u", scope=MemoryScope.GLOBAL, tags=["b"])
+    )
+    fetched = await mem_service.get_item(item.id)
+    assert fetched.id == item.id
+    scoped = await mem_service.list_items(scope=MemoryScope.GLOBAL)
+    assert len(scoped) == 1 and scoped[0].scope is MemoryScope.GLOBAL
+    tagged = await mem_service.list_items(tags=["a"])
+    assert tagged[0].id == item.id
+    mem_service._items[item.id].expires_at = fetched.created_at - timedelta(seconds=1)
+    await mem_service.list_items()
+    assert item.id not in mem_service._items
+    with pytest.raises(MemoryNotFoundError):
+        await mem_service.get_item("missing")
+
+
+@pytest.mark.asyncio
+async def test_update_and_delete(monkeypatch) -> None:
+    monkeypatch.setattr(mem_service, "backend", None)
+    mem_service._items.clear()
+    item = await mem_service.add_item(
+        MemoryItemCreate(text="old", user_id="u", tags=["t"], metadata={"a": 1}, ttl=10)
+    )
+    updated = await mem_service.update_item(
+        item.id,
+        MemoryItemUpdate(text="new", tags=["n"], metadata={"b": 2}, ttl=20),
+    )
+    assert updated.text == "new"
+    assert updated.tags == ["n"]
+    assert updated.metadata == {"b": 2}
+    assert updated.ttl == 20
+    await mem_service.delete_item(item.id)
+    assert item.id not in mem_service._items
+    with pytest.raises(MemoryNotFoundError):
+        await mem_service.delete_item(item.id)
+
+
+@pytest.mark.asyncio
+async def test_search_success_filters(monkeypatch) -> None:
+    monkeypatch.setattr(mem_service, "backend", None)
+    mem_service._items.clear()
+    item = await mem_service.add_item(
+        MemoryItemCreate(text="hello world", user_id="u", tags=["x"], scope=MemoryScope.USER)
+    )
+    await mem_service.add_item(
+        MemoryItemCreate(text="bye", user_id="u", tags=["y"], scope=MemoryScope.GLOBAL)
+    )
+    res = await mem_service.search_items("hello")
+    assert res and res[0].id == item.id
+    scoped = await mem_service.search_items("bye", scope=MemoryScope.GLOBAL)
+    assert len(scoped) == 1
+    tagged = await mem_service.search_items("hello", tags=["x"])
+    assert len(tagged) == 1
+
+
+@pytest.mark.asyncio
+async def test_bulk_import_export(monkeypatch) -> None:
+    monkeypatch.setattr(mem_service, "backend", None)
+    mem_service._items.clear()
+    items = [MemoryItemCreate(text=str(i), user_id="u") for i in range(3)]
+    created = await mem_service.bulk_import(items)
+    assert len(created) == 3
+    exported = await mem_service.bulk_export()
+    assert len(exported) >= 3
