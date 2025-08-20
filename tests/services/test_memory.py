@@ -19,10 +19,34 @@ async def test_add_memory(monkeypatch) -> None:
     result = await mem_service.add_item(data)
     assert result.id == "1"
 
+
+@pytest.mark.asyncio
+async def test_add_memory_retry_success(monkeypatch) -> None:
+    calls = 0
+
+    class Flaky:
+        def add(self, *_, **__):
+            nonlocal calls
+            calls += 1
+            if calls < 2:
+                raise RuntimeError("temp")
+            return {"id": "1", "embedding": []}
+
+    monkeypatch.setattr(mem_service, "backend", Flaky())
+    mem_service._items.clear()
+    data = MemoryItemCreate(text="hello", user_id="u")
+    result = await mem_service.add_item(data)
+    assert result.id == "1"
+    assert calls == 2
+
 @pytest.mark.asyncio
 async def test_add_memory_error(monkeypatch) -> None:
+    calls = 0
+
     class Fail:
         def add(self, *_, **__):
+            nonlocal calls
+            calls += 1
             raise RuntimeError("boom")
 
     monkeypatch.setattr(mem_service, "backend", Fail())
@@ -30,16 +54,22 @@ async def test_add_memory_error(monkeypatch) -> None:
     data = MemoryItemCreate(text="hi", user_id="u")
     with pytest.raises(MemoryServiceError):
         await mem_service.add_item(data)
+    assert calls == 2
 
 @pytest.mark.asyncio
 async def test_search_error(monkeypatch) -> None:
+    calls = 0
+
     class Fail:
         def search(self, *_, **__):
+            nonlocal calls
+            calls += 1
             raise RuntimeError("boom")
 
     monkeypatch.setattr(mem_service, "backend", Fail())
     with pytest.raises(MemoryServiceError):
         await mem_service.search_items("hi")
+    assert calls == 2
 
 @pytest.mark.asyncio
 async def test_search_validation() -> None:

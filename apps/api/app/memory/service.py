@@ -7,6 +7,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 
+from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
+
 from .exceptions import MemoryNotFoundError, MemoryServiceError
 from .models import MemoryItem, MemoryItemCreate, MemoryItemUpdate, MemoryScope
 
@@ -56,14 +58,22 @@ else:  # pragma: no cover
     _backend = None
 
 
-async def _with_retry(func, *args, retries: int = 1, timeout: float = 5, **kwargs):
-    for attempt in range(retries + 1):
-        try:
-            return await asyncio.wait_for(asyncio.to_thread(func, *args, **kwargs), timeout)
-        except Exception:  # noqa: BLE001
-            if attempt == retries:
-                raise
-            await asyncio.sleep(0.1)
+async def _with_retry(
+    func,
+    *args,
+    retries: int = 1,
+    timeout: float = 5,
+    **kwargs,
+):
+    async for attempt in AsyncRetrying(
+        stop=stop_after_attempt(retries + 1),
+        wait=wait_exponential(multiplier=0.1),
+        reraise=True,
+    ):
+        with attempt:
+            return await asyncio.wait_for(
+                asyncio.to_thread(func, *args, **kwargs), timeout
+            )
 
 
 class MemoryService:
