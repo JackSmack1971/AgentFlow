@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "ts-node --esm lib/api.test.ts"
   },
   "dependencies": {
     "next": "latest",
@@ -24,6 +24,7 @@
     "typescript": "^5.4.0",
     "tailwindcss": "^3.4.1",
     "postcss": "^8.4.35",
-    "autoprefixer": "^10.4.16"
+    "autoprefixer": "^10.4.16",
+    "ts-node": "^10.9.2"
   }
 }
