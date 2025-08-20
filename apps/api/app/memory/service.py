@@ -5,7 +5,7 @@ import asyncio
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
@@ -89,26 +89,41 @@ class MemoryService:
         for k in expired:
             self._items.pop(k, None)
 
+    def _prepare_metadata(
+        self, data: MemoryItemCreate, expires_at: Optional[datetime]
+    ) -> Dict[str, Any]:
+        """Build metadata payload for backend insertion."""
+        return {
+            **data.metadata,
+            "scope": data.scope.value,
+            "tags": data.tags,
+            "expires_at": expires_at.isoformat() if expires_at else None,
+        }
+
+    async def _insert_backend(
+        self, data: MemoryItemCreate, meta: Dict[str, Any]
+    ) -> Tuple[str, List[float]]:
+        """Insert memory into backend and return new item id and embedding."""
+        if not self.backend:
+            return str(uuid.uuid4()), []
+        try:
+            res = await _with_retry(
+                self.backend.add,
+                data.text,
+                user_id=data.user_id,
+                agent_id=data.agent_id,
+                metadata=meta,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise MemoryServiceError("Failed to add memory") from exc
+        return str(res.get("id", uuid.uuid4())), res.get("embedding", [])
+
     async def add_item(self, data: MemoryItemCreate) -> MemoryItem:
         self._purge()
         created_at = datetime.now(timezone.utc)
         expires_at = created_at + timedelta(seconds=data.ttl) if data.ttl else None
-        item_id = str(uuid.uuid4())
-        embedding: List[float] = []
-        try:
-            if self.backend:
-                meta = {**data.metadata, "scope": data.scope.value, "tags": data.tags, "expires_at": expires_at.isoformat() if expires_at else None}
-                res = await _with_retry(
-                    self.backend.add,
-                    data.text,
-                    user_id=data.user_id,
-                    agent_id=data.agent_id,
-                    metadata=meta,
-                )
-                item_id = str(res.get("id", item_id))
-                embedding = res.get("embedding", [])
-        except Exception as exc:  # noqa: BLE001
-            raise MemoryServiceError("Failed to add memory") from exc
+        meta = self._prepare_metadata(data, expires_at)
+        item_id, embedding = await self._insert_backend(data, meta)
         item = MemoryItem(
             id=item_id,
             text=data.text,
