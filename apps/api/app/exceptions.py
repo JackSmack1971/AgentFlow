@@ -19,3 +19,11 @@ class HealthCheckError(AgentFlowError):
     def __init__(self, service: str, message: str):
         super().__init__(message)
         self.service = service
+
+
+class RBACError(AgentFlowError):
+    """Raised when permission checks fail or cannot be completed."""
+
+
+class SeedError(AgentFlowError):
+    """Raised when database seeding operations fail."""
