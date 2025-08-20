@@ -1,4 +1,5 @@
 """Pydantic models for authentication."""
+
 from pydantic import BaseModel, EmailStr
 
 
@@ -19,3 +20,15 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class ResetRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetResponse(BaseModel):
+    reset_token: str
+
+
+class UserInfo(BaseModel):
+    email: EmailStr

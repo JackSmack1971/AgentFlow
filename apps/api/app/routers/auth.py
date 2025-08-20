@@ -1,7 +1,18 @@
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
+
+from fastapi import APIRouter, HTTPException, Header
+from loguru import logger
 
 from ..exceptions import InvalidCredentialsError, TokenError
-from ..models.auth import LoginRequest, RefreshRequest, TokenResponse, UserCreate
+from ..models.auth import (
+    LoginRequest,
+    RefreshRequest,
+    ResetRequest,
+    ResetResponse,
+    TokenResponse,
+    UserCreate,
+    UserInfo,
+)
 from ..services import auth as auth_service
 
 router = APIRouter()
@@ -55,4 +66,27 @@ async def logout(token: RefreshRequest) -> dict:
         await auth_service.revoke_refresh_token(token.refresh_token)
         return {"status": "ok"}
     except TokenError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+
+@router.post("/reset", response_model=ResetResponse)
+async def reset(request: ResetRequest) -> ResetResponse:
+    try:
+        token = await auth_service.generate_reset_token(request.email)
+        logger.info("password reset requested", email=request.email)
+        return ResetResponse(reset_token=token)
+    except InvalidCredentialsError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/me", response_model=UserInfo)
+async def me(authorization: Annotated[str | None, Header()] = None) -> UserInfo:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = authorization.split(" ", 1)[1]
+    try:
+        subject = await auth_service.decode_token(token)
+        info = await auth_service.get_user_info(subject)
+        return UserInfo(**info)
+    except (TokenError, InvalidCredentialsError) as exc:
         raise HTTPException(status_code=401, detail=str(exc))

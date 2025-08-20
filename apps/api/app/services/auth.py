@@ -94,3 +94,15 @@ async def decode_token(token: str) -> str:
         return payload["sub"]
     except jwt.PyJWTError as exc:
         raise TokenError("Invalid token") from exc
+
+
+async def generate_reset_token(email: str) -> str:
+    if email not in USERS:
+        raise InvalidCredentialsError("User not found")
+    return uuid4().hex
+
+
+async def get_user_info(email: str) -> dict[str, str]:
+    if email not in USERS:
+        raise InvalidCredentialsError("User not found")
+    return {"email": email}
