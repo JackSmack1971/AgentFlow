@@ -8,9 +8,10 @@ from typing import Callable, Dict, Iterable
 from uuid import uuid4
 
 import jwt
+import pyotp
 
 from .. import config
-from ..exceptions import InvalidCredentialsError, TokenError
+from ..exceptions import InvalidCredentialsError, OTPError, TokenError
 from .token_store import (
     is_refresh_token_blacklisted,
     revoke_refresh_token,
@@ -20,6 +21,7 @@ from .token_store import (
 
 settings = config.get_settings()
 USERS: Dict[str, str] = {}
+OTP_SECRETS: Dict[str, str] = {}
 
 # Password policy constants
 PASSWORD_POLICY_MIN_LENGTH = 8
@@ -40,7 +42,17 @@ def _hash(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
-async def register_user(email: str, password: str) -> None:
+def generate_totp_secret() -> str:
+    return pyotp.random_base32()
+
+
+async def verify_totp(email: str, code: str) -> None:
+    secret = OTP_SECRETS.get(email)
+    if not secret or not pyotp.TOTP(secret).verify(code):
+        raise OTPError("Invalid one-time password")
+
+
+async def register_user(email: str, password: str) -> str:
     if not email or not password:
         raise InvalidCredentialsError("Email and password required")
 
@@ -61,12 +73,16 @@ async def register_user(email: str, password: str) -> None:
         raise InvalidCredentialsError("Password must contain " + ", ".join(missing))
 
     USERS[email] = _hash(password)
+    secret = generate_totp_secret()
+    OTP_SECRETS[email] = secret
+    return secret
 
 
-async def authenticate_user(email: str, password: str) -> bool:
+async def authenticate_user(email: str, password: str, otp_code: str) -> bool:
     stored = USERS.get(email)
     if not stored or stored != _hash(password):
         raise InvalidCredentialsError("Invalid email or password")
+    await verify_totp(email, otp_code)
     return True
 
 

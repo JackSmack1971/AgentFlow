@@ -20,6 +20,7 @@ from apps.api.app.core.cache import Cache
 from apps.api.app.main import app
 from apps.api.app.services import auth as auth_service
 from apps.api.app.services import token_store
+import pyotp
 
 
 # Stub heavy dependencies
@@ -89,9 +90,11 @@ async def test_register_and_login() -> None:
             json={"email": "a@b.com", "password": "Password1!"},
         )
         assert resp.status_code == 201
+        secret = resp.json()["otp_secret"]
+        code = pyotp.TOTP(secret).now()
         resp = await ac.post(
             "/auth/login",
-            json={"email": "a@b.com", "password": "Password1!"},
+            json={"email": "a@b.com", "password": "Password1!", "otp_code": code},
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -103,13 +106,15 @@ async def test_refresh_rotation() -> None:
     auth_service.USERS.clear()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        await ac.post(
+        reg = await ac.post(
             "/auth/register",
             json={"email": "a@b.com", "password": "Password1!"},
         )
+        secret = reg.json()["otp_secret"]
+        code = pyotp.TOTP(secret).now()
         login = await ac.post(
             "/auth/login",
-            json={"email": "a@b.com", "password": "Password1!"},
+            json={"email": "a@b.com", "password": "Password1!", "otp_code": code},
         )
         token1 = login.json()["refresh_token"]
         first = await ac.post("/auth/refresh", json={"refresh_token": token1})
@@ -126,13 +131,15 @@ async def test_logout_blacklists_token() -> None:
     auth_service.USERS.clear()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        await ac.post(
+        reg = await ac.post(
             "/auth/register",
             json={"email": "a@b.com", "password": "Password1!"},
         )
+        secret = reg.json()["otp_secret"]
+        code = pyotp.TOTP(secret).now()
         login = await ac.post(
             "/auth/login",
-            json={"email": "a@b.com", "password": "Password1!"},
+            json={"email": "a@b.com", "password": "Password1!", "otp_code": code},
         )
         token = login.json()["refresh_token"]
         resp = await ac.post("/auth/logout", json={"refresh_token": token})
@@ -154,13 +161,32 @@ async def test_login_invalid_credentials() -> None:
     auth_service.USERS.clear()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        reg = await ac.post(
+            "/auth/register",
+            json={"email": "a@b.com", "password": "Password1!"},
+        )
+        secret = reg.json()["otp_secret"]
+        code = pyotp.TOTP(secret).now()
+        resp = await ac.post(
+            "/auth/login",
+            json={"email": "a@b.com", "password": "WrongPass1!", "otp_code": code},
+        )
+        assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_login_invalid_otp() -> None:
+    auth_service.USERS.clear()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         await ac.post(
             "/auth/register",
             json={"email": "a@b.com", "password": "Password1!"},
         )
+        wrong = "000000"
         resp = await ac.post(
             "/auth/login",
-            json={"email": "a@b.com", "password": "WrongPass1!"},
+            json={"email": "a@b.com", "password": "Password1!", "otp_code": wrong},
         )
         assert resp.status_code == 401
 
@@ -206,17 +232,19 @@ async def test_password_reset_and_me() -> None:
     auth_service.USERS.clear()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        await ac.post(
+        reg = await ac.post(
             "/auth/register",
             json={"email": "a@b.com", "password": "Password1!"},
         )
+        secret = reg.json()["otp_secret"]
         reset = await ac.post("/auth/reset", json={"email": "a@b.com"})
         assert reset.status_code == 200
         token = reset.json()["reset_token"]
         assert token
+        code = pyotp.TOTP(secret).now()
         login = await ac.post(
             "/auth/login",
-            json={"email": "a@b.com", "password": "Password1!"},
+            json={"email": "a@b.com", "password": "Password1!", "otp_code": code},
         )
         access = login.json()["access_token"]
         me = await ac.get("/auth/me", headers={"Authorization": f"Bearer {access}"})

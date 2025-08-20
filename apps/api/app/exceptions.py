@@ -41,5 +41,9 @@ class TokenError(AuthenticationError):
     """Raised when token generation or validation fails."""
 
 
+class OTPError(AuthenticationError):
+    """Raised when one-time password validation fails."""
+
+
 class CacheError(AgentFlowError):
     """Raised when cache operations fail."""
