@@ -1,0 +1,23 @@
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+python-dotenv==1.1.1
+pydantic==2.11.7
+pydantic-settings==2.10.1
+pydantic-ai-slim[openai]==0.7.4
+mcp[cli]==1.13.0
+# mem0 - package unavailable on PyPI
+qdrant-client==1.15.1
+redis==6.4.0
+SQLAlchemy==2.0.43
+alembic==1.16.4
+psycopg[binary]==3.2.9
+httpx==0.28.1
+r2r==3.6.6
+loguru==0.7.3
+cryptography==45.0.6
+pytest==8.4.1
+pytest-asyncio==1.1.0
+respx==0.22.0
+pyjwt==2.10.1
+tenacity==9.1.2
+fakeredis==2.31.0
