@@ -199,3 +199,43 @@ async def test_register_password_banned() -> None:
             json={"email": "a@b.com", "password": "password"},
         )
         assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_password_reset_and_me() -> None:
+    auth_service.USERS.clear()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        await ac.post(
+            "/auth/register",
+            json={"email": "a@b.com", "password": "Password1!"},
+        )
+        reset = await ac.post("/auth/reset", json={"email": "a@b.com"})
+        assert reset.status_code == 200
+        token = reset.json()["reset_token"]
+        assert token
+        login = await ac.post(
+            "/auth/login",
+            json={"email": "a@b.com", "password": "Password1!"},
+        )
+        access = login.json()["access_token"]
+        me = await ac.get("/auth/me", headers={"Authorization": f"Bearer {access}"})
+        assert me.status_code == 200
+        assert me.json()["email"] == "a@b.com"
+
+
+@pytest.mark.asyncio
+async def test_me_unauthorized() -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/auth/me")
+        assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_reset_unknown_user() -> None:
+    auth_service.USERS.clear()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post("/auth/reset", json={"email": "a@b.com"})
+        assert resp.status_code == 404
