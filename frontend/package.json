@@ -8,24 +8,26 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "ts-node --esm lib/api.test.ts && ts-node --esm providers/auth-provider.test.ts && ts-node --esm providers/theme-provider.test.ts && ts-node --esm components/layout/error-boundary.test.ts && ts-node --esm components/layout/navigation.test.ts && ts-node --esm app/root-layout.test.ts"
+    "test": "tsx lib/api.test.ts && tsx providers/auth-provider.test.ts && tsx providers/theme-provider.test.ts && tsx components/layout/error-boundary.test.ts && tsx components/layout/navigation.test.ts && tsx app/root-layout.test.ts && tsx \"app/(auth)/login/page.test.ts\""
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.1",
+    "lucide-react": "latest",
     "next": "latest",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "lucide-react": "latest",
     "react-hook-form": "^7.51.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/react": "^18.2.48",
     "@types/node": "^20.11.30",
+    "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
-    "typescript": "^5.4.0",
-    "tailwindcss": "^3.4.1",
-    "postcss": "^8.4.35",
     "autoprefixer": "^10.4.16",
-    "ts-node": "^10.9.2"
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.4",
+    "typescript": "^5.4.0"
   }
 }
