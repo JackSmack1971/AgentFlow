@@ -1,5 +1,5 @@
 import pytest
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from apps.api.app.memory.service import memory_service as mem_service
 from apps.api.app.memory.exceptions import MemoryNotFoundError, MemoryServiceError
@@ -160,3 +160,33 @@ async def test_bulk_import_export(monkeypatch) -> None:
     assert len(created) == 3
     exported = await mem_service.bulk_export()
     assert len(exported) >= 3
+
+
+@pytest.mark.asyncio
+async def test_prepare_metadata() -> None:
+    data = MemoryItemCreate(text="hi", user_id="u", tags=["t"], metadata={"a": 1})
+    expires = datetime.now(timezone.utc) + timedelta(seconds=60)
+    meta = mem_service._prepare_metadata(data, expires)
+    assert meta["scope"] == "user"
+    assert meta["tags"] == ["t"]
+    assert meta["expires_at"] == expires.isoformat()
+
+
+@pytest.mark.asyncio
+async def test_insert_backend_helpers(monkeypatch) -> None:
+    monkeypatch.setattr(mem_service, "backend", None)
+    data = MemoryItemCreate(text="hi", user_id="u")
+    item_id, embedding = await mem_service._insert_backend(data, {})
+    assert item_id and isinstance(embedding, list)
+
+
+@pytest.mark.asyncio
+async def test_insert_backend_error(monkeypatch) -> None:
+    class Fail:
+        def add(self, *_, **__):
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(mem_service, "backend", Fail())
+    data = MemoryItemCreate(text="hi", user_id="u")
+    with pytest.raises(MemoryServiceError):
+        await mem_service._insert_backend(data, {})
