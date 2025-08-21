@@ -4,33 +4,42 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Optional
+from typing import Any
 
 from httpx import AsyncClient, HTTPError
 
 from ..exceptions import R2RServiceError
 
-
 R2R_BASE = os.getenv("R2R_BASE_URL", "http://localhost:7272")
 R2R_API_KEY = os.getenv("R2R_API_KEY", "")
+
+ALLOWED_TYPES = {"text/plain", "text/markdown"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 
 class RAGService:
     """Service for interacting with the R2R retrieval API."""
 
-    def __init__(self, base_url: Optional[str] = None, api_key: Optional[str] = None) -> None:
+    def __init__(self, base_url: str | None = None, api_key: str | None = None) -> None:
         self.base_url = base_url or R2R_BASE
         self.api_key = api_key or R2R_API_KEY
 
-    async def query(self, query: str, *, use_kg: bool = True, limit: int = 25) -> dict:
+    async def query(
+        self, query: str, *, use_kg: bool = True, limit: int = 25
+    ) -> dict[str, Any]:
         if not query.strip():
             raise ValueError("query cannot be empty")
         payload = {
             "query": query,
             "rag_generation_config": {"model": "gpt-4o-mini", "temperature": 0.0},
-            "search_settings": {"use_hybrid_search": True, "use_kg_search": use_kg, "limit": limit},
+            "search_settings": {
+                "use_hybrid_search": True,
+                "use_kg_search": use_kg,
+                "limit": limit,
+            },
         }
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+        last_exc: HTTPError | None = None
         for attempt in range(3):
             try:
                 async with AsyncClient(timeout=10) as client:
@@ -42,19 +51,62 @@ class RAGService:
                     resp.raise_for_status()
                     return resp.json()
             except HTTPError as exc:  # noqa: BLE001
-                if attempt == 2:
-                    raise R2RServiceError("R2R request failed") from exc
+                last_exc = exc
                 await asyncio.sleep(2**attempt)
+        raise R2RServiceError("R2R request failed") from last_exc
+
+    async def _post_with_retry(
+        self, endpoint: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+        last_exc: HTTPError | None = None
+        for attempt in range(3):
+            try:
+                async with AsyncClient(timeout=10) as client:
+                    resp = await client.post(
+                        f"{self.base_url}{endpoint}", json=payload, headers=headers
+                    )
+                    resp.raise_for_status()
+                    return resp.json()
+            except HTTPError as exc:  # noqa: BLE001
+                last_exc = exc
+                await asyncio.sleep(2**attempt)
+        raise R2RServiceError(f"R2R request to {endpoint} failed") from last_exc
+
+    async def upload_document(
+        self,
+        content: bytes,
+        *,
+        filename: str,
+        content_type: str,
+        chunk_size: int = 1000,
+    ) -> dict[str, Any]:
+        if content_type not in ALLOWED_TYPES:
+            raise ValueError("unsupported file type")
+        if len(content) > MAX_FILE_SIZE:
+            raise ValueError("file too large")
+        text = content.decode("utf-8", errors="ignore")
+        chunks = [
+            {
+                "text": text[i : i + chunk_size],
+                "metadata": {"source": filename, "chunk": i // chunk_size},
+            }
+            for i in range(0, len(text), chunk_size)
+        ]
+        ids = [
+            (await self._post_with_retry("/api/ingest", chunk)).get("id")
+            for chunk in chunks
+        ]
+        return await self._post_with_retry("/api/index", {"document_ids": ids})
 
 
 rag_service = RAGService()
 
 
-async def rag(query: str, use_kg: bool = True, limit: int = 25) -> dict:
+async def rag(query: str, use_kg: bool = True, limit: int = 25) -> dict[str, Any]:
     """Compatibility wrapper for existing imports."""
 
     return await rag_service.query(query, use_kg=use_kg, limit=limit)
 
 
 __all__ = ["RAGService", "rag_service", "rag"]
-
