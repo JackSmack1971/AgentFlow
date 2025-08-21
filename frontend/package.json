@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "tsx lib/api.test.ts && tsx providers/auth-provider.test.ts && tsx providers/theme-provider.test.ts && tsx components/layout/error-boundary.test.ts && tsx components/layout/navigation.test.ts && tsx app/root-layout.test.ts && tsx \"app/(auth)/login/page.test.ts\" && tsx \"app/(auth)/register/page.test.ts\""
+    "test": "tsx lib/api.test.ts && tsx providers/auth-provider.test.ts && tsx providers/theme-provider.test.ts && tsx components/layout/error-boundary.test.ts && tsx components/layout/navigation.test.ts && tsx app/root-layout.test.ts && tsx \"app/(auth)/layout.test.tsx\" && tsx \"app/(auth)/login/page.test.ts\" && tsx \"app/(auth)/register/page.test.ts\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
