@@ -3,7 +3,7 @@ import sys
 import types
 import pytest
 
-from apps.api.app.memory import service as memory_service_module
+from apps.api.app.services import memory as memory_service_module
 from apps.api.app.memory.exceptions import MemoryServiceError
 
 

@@ -10,7 +10,7 @@ os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
 os.environ.setdefault("OPENAI_API_KEY", "test")
 
 from apps.api.app.memory.models import MemoryItemCreate, MemoryScope
-from apps.api.app.memory.service import memory_service
+from apps.api.app.services.memory import memory_service
 
 
 @pytest.mark.asyncio

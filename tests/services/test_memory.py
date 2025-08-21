@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, timedelta, timezone
 
-from apps.api.app.memory.service import memory_service as mem_service
+from apps.api.app.services.memory import memory_service as mem_service
 from apps.api.app.memory.exceptions import MemoryNotFoundError, MemoryServiceError
 from apps.api.app.memory.models import (
     MemoryItemCreate,
