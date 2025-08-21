@@ -1,4 +1,5 @@
 {
-  "linter": { "enabled": true },
-  "formatter": { "enabled": true }
+  "linter": { "enabled": true, "rules": { "recommended": false } },
+  "formatter": { "enabled": true },
+  "assist": { "enabled": false }
 }

@@ -8,6 +8,7 @@ repos:
         pass_filenames: false
       - id: biome-format
         name: Biome Format
-        entry: npm --prefix frontend run format --silent
+        entry: npx --yes --prefix frontend biome format
         language: system
-        pass_filenames: false
+        pass_filenames: true
+        exclude: frontend/biome\.json
