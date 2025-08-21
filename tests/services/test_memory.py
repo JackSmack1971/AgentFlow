@@ -1,10 +1,14 @@
 import os
+import time
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
 os.environ.setdefault("OPENAI_API_KEY", "test")
 
+import apps.api.app.services.memory as mem_mod
 from apps.api.app.memory.exceptions import MemoryNotFoundError, MemoryServiceError
 from apps.api.app.memory.models import (
     MemoryItemCreate,
@@ -20,6 +24,21 @@ class DummyBackend:
 
     def search(self, *_, **__):
         return [{"id": "1", "text": "hi"}]
+
+
+DUMMY_SETTINGS = SimpleNamespace(
+    secret_key="x",
+    database_url="sqlite://",
+    redis_url="redis://",
+    qdrant_url="http://localhost",
+    memory_api_timeout=5.0,
+    memory_api_retries=1,
+)
+
+
+@pytest.fixture(autouse=True)
+def _patch_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(mem_mod, "get_settings", lambda: DUMMY_SETTINGS)
 
 
 @pytest.mark.asyncio
@@ -189,7 +208,9 @@ async def test_prepare_metadata() -> None:
 async def test_insert_backend_helpers(monkeypatch) -> None:
     monkeypatch.setattr(mem_service, "backend", None)
     data = MemoryItemCreate(text="hi", user_id="u")
-    item_id, embedding = await mem_service._insert_backend(data, {})
+    item_id, embedding = await mem_service._insert_backend(
+        data, {}, timeout=1, retries=1
+    )
     assert item_id and isinstance(embedding, list)
 
 
@@ -202,4 +223,60 @@ async def test_insert_backend_error(monkeypatch) -> None:
     monkeypatch.setattr(mem_service, "backend", Fail())
     data = MemoryItemCreate(text="hi", user_id="u")
     with pytest.raises(MemoryServiceError):
-        await mem_service._insert_backend(data, {})
+        await mem_service._insert_backend(data, {}, timeout=1, retries=1)
+
+
+@pytest.mark.asyncio
+async def test_add_item_respects_custom_settings(monkeypatch) -> None:
+    recorded: dict[str, float | int] = {}
+
+    async def fake_with_retry(
+        func, *args, retries: int, timeout: float, **kwargs
+    ) -> Any:
+        recorded["retries"] = retries
+        recorded["timeout"] = timeout
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(mem_mod, "_with_retry", fake_with_retry)
+    monkeypatch.setattr(mem_service, "backend", DummyBackend())
+    mem_service._items.clear()
+    settings = SimpleNamespace(memory_api_timeout=0.1, memory_api_retries=3)
+    monkeypatch.setattr(mem_mod, "get_settings", lambda: settings)
+    await mem_service.add_item(MemoryItemCreate(text="hi", user_id="u"))
+    assert recorded == {"retries": 3, "timeout": 0.1}
+
+
+@pytest.mark.asyncio
+async def test_add_item_timeout(monkeypatch) -> None:
+    class Slow:
+        def add(self, *_, **__):
+            time.sleep(0.05)
+            return {"id": "1", "embedding": []}
+
+    monkeypatch.setattr(mem_service, "backend", Slow())
+    mem_service._items.clear()
+    settings = SimpleNamespace(memory_api_timeout=0.01, memory_api_retries=0)
+    monkeypatch.setattr(mem_mod, "get_settings", lambda: settings)
+    with pytest.raises(MemoryServiceError):
+        await mem_service.add_item(MemoryItemCreate(text="hi", user_id="u"))
+
+
+@pytest.mark.asyncio
+async def test_search_respects_custom_settings(monkeypatch) -> None:
+    recorded: dict[str, float | int] = {}
+
+    async def fake_with_retry(
+        func, *args, retries: int, timeout: float, **kwargs
+    ) -> Any:
+        recorded["retries"] = retries
+        recorded["timeout"] = timeout
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(mem_mod, "_with_retry", fake_with_retry)
+    monkeypatch.setattr(mem_service, "backend", DummyBackend())
+    mem_service._items.clear()
+    settings = SimpleNamespace(memory_api_timeout=0.2, memory_api_retries=4)
+    monkeypatch.setattr(mem_mod, "get_settings", lambda: settings)
+    await mem_service.add_item(MemoryItemCreate(text="hi", user_id="u"))
+    await mem_service.search_items("hi")
+    assert recorded == {"retries": 4, "timeout": 0.2}

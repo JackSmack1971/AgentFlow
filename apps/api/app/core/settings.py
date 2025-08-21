@@ -25,9 +25,11 @@ class Settings(BaseSettings):
     agent_run_timeout_seconds: int = 30
     agent_retry_max_attempts: int = 3
     agent_retry_backoff_seconds: float = 1.0
+    memory_api_timeout: float = 5.0
+    memory_api_retries: int = 1
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """Return cached application settings."""
 
