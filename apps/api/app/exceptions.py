@@ -9,6 +9,10 @@ class R2RServiceError(AgentFlowError):
     """Raised when R2R service integration fails."""
 
 
+class WorkflowExecutionError(AgentFlowError):
+    """Raised when workflow execution fails."""
+
+
 class MemoryServiceError(AgentFlowError):
     """Raised when memory operations fail."""
 
