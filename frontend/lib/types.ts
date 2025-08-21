@@ -17,3 +17,8 @@ export interface RagQuery {
 export interface AgentPrompt {
   prompt: string;
 }
+
+export interface Agent {
+  id: string;
+  name: string;
+}
