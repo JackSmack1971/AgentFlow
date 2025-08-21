@@ -17,6 +17,7 @@ from typing import Any
 
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
+from ..config import get_settings
 from ..memory.exceptions import MemoryNotFoundError, MemoryServiceError
 from ..memory.models import (
     MemoryEvent,
@@ -84,8 +85,8 @@ except MemoryServiceError as exc:
 async def _with_retry(
     func: Any,
     *args: Any,
-    retries: int = 1,
-    timeout: float = 5,
+    retries: int,
+    timeout: float,
     **kwargs: Any,
 ) -> Any:
     """Execute a blocking function in a thread with retry and timeout."""
@@ -147,32 +148,28 @@ class MemoryService:
             "expires_at": expires_at.isoformat() if expires_at else None,
         }
 
-    async def _insert_backend(
-        self, data: MemoryItemCreate, meta: dict[str, Any]
-    ) -> tuple[str, list[float]]:
-        """Insert memory into backend and return new item id and embedding."""
+    def _resolve_params(
+        self, timeout: float | None, retries: int | None
+    ) -> tuple[float, int]:
+        """Return timeout and retry values with settings fallbacks."""
 
-        if not self.backend:
-            return str(uuid.uuid4()), []
-        try:
-            res = await _with_retry(
-                self.backend.add,
-                data.text,
-                user_id=data.user_id,
-                agent_id=data.agent_id,
-                metadata=meta,
-            )
-        except Exception as exc:  # noqa: BLE001
-            raise MemoryServiceError("Failed to add memory") from exc
-        return str(res.get("id", uuid.uuid4())), res.get("embedding", [])
+        settings = get_settings()
+        return (
+            timeout or settings.memory_api_timeout,
+            retries or settings.memory_api_retries,
+        )
 
-    async def add_item(self, data: MemoryItemCreate) -> MemoryItem:
-        self._purge()
-        created_at = datetime.now(timezone.utc)
-        expires_at = created_at + timedelta(seconds=data.ttl) if data.ttl else None
-        meta = self._prepare_metadata(data, expires_at)
-        item_id, embedding = await self._insert_backend(data, meta)
-        item = MemoryItem(
+    def _build_item(
+        self,
+        item_id: str,
+        data: MemoryItemCreate,
+        embedding: list[float],
+        created_at: datetime,
+        expires_at: datetime | None,
+    ) -> MemoryItem:
+        """Construct a MemoryItem from provided data."""
+
+        return MemoryItem(
             id=item_id,
             text=data.text,
             scope=data.scope,
@@ -186,6 +183,116 @@ class MemoryService:
             expires_at=expires_at,
             ttl=data.ttl,
         )
+
+    async def _backend_update(
+        self, item_id: str, item: MemoryItem, timeout: float, retries: int
+    ) -> None:
+        """Update memory in backend if supported."""
+
+        if self.backend and hasattr(self.backend, "update"):
+            try:
+                await _with_retry(
+                    self.backend.update,
+                    item_id,
+                    text=item.text,
+                    metadata=item.metadata,
+                    retries=retries,
+                    timeout=timeout,
+                )
+            except Exception as exc:  # noqa: BLE001
+                raise MemoryServiceError("Failed to update memory") from exc
+
+    async def _backend_delete(self, item_id: str, timeout: float, retries: int) -> None:
+        """Delete memory in backend if supported."""
+
+        if self.backend and hasattr(self.backend, "delete"):
+            try:
+                await _with_retry(
+                    self.backend.delete,
+                    item_id,
+                    retries=retries,
+                    timeout=timeout,
+                )
+            except Exception as exc:  # noqa: BLE001
+                raise MemoryServiceError("Failed to delete memory") from exc
+
+    async def _backend_search(
+        self, query: str, limit: int, timeout: float, retries: int
+    ) -> list[str]:
+        """Search backend and return matching ids."""
+
+        res = await _with_retry(
+            self.backend.search,
+            query,
+            limit=limit,
+            retries=retries,
+            timeout=timeout,
+        )
+        return [r.get("id") for r in res]
+
+    def _local_search(self, query: str) -> list[MemoryItem]:
+        """Search local in-memory store."""
+
+        return [i for i in self._items.values() if query.lower() in i.text.lower()]
+
+    def _apply_filters(
+        self,
+        results: list[MemoryItem],
+        scope: MemoryScope | None,
+        tags: list[str] | None,
+    ) -> list[MemoryItem]:
+        """Apply scope and tag filters to results."""
+
+        if scope:
+            results = [i for i in results if i.scope == scope]
+        if tags:
+            results = [i for i in results if set(tags).issubset(set(i.tags))]
+        return results
+
+    async def _insert_backend(
+        self,
+        data: MemoryItemCreate,
+        meta: dict[str, Any],
+        *,
+        timeout: float,
+        retries: int,
+    ) -> tuple[str, list[float]]:
+        """Insert memory into backend and return new item id and embedding."""
+
+        if not self.backend:
+            return str(uuid.uuid4()), []
+        try:
+            res = await _with_retry(
+                self.backend.add,
+                data.text,
+                user_id=data.user_id,
+                agent_id=data.agent_id,
+                metadata=meta,
+                retries=retries,
+                timeout=timeout,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise MemoryServiceError("Failed to add memory") from exc
+        return str(res.get("id", uuid.uuid4())), res.get("embedding", [])
+
+    async def add_item(
+        self,
+        data: MemoryItemCreate,
+        *,
+        timeout: float | None = None,
+        retries: int | None = None,
+    ) -> MemoryItem:
+        """Add a new memory item, honoring retry/timeout settings."""
+
+        timeout, retries = self._resolve_params(timeout, retries)
+        self._purge()
+        created_at = datetime.now(timezone.utc)
+        expires_at = created_at + timedelta(seconds=data.ttl) if data.ttl else None
+        meta = self._prepare_metadata(data, expires_at)
+        item_id, embedding = await self._insert_backend(
+            data, meta, timeout=timeout, retries=retries
+        )
+        item = self._build_item(item_id, data, embedding, created_at, expires_at)
         self._items[item_id] = item
         await self._publish(MemoryEvent(action="created", item=item))
         return item
@@ -213,26 +320,49 @@ class MemoryService:
             items = [i for i in items if set(tags).issubset(set(i.tags))]
         return items[offset : offset + limit]
 
-    async def update_item(self, item_id: str, data: MemoryItemUpdate) -> MemoryItem:
+    async def update_item(
+        self,
+        item_id: str,
+        data: MemoryItemUpdate,
+        *,
+        timeout: float | None = None,
+        retries: int | None = None,
+    ) -> MemoryItem:
+        """Update an existing memory item."""
+
+        timeout, retries = self._resolve_params(timeout, retries)
         item = await self.get_item(item_id)
-        if data.text is not None:
-            item.text = data.text
-        if data.tags is not None:
-            item.tags = data.tags
-        if data.metadata is not None:
-            item.metadata = data.metadata
+        updates = {
+            "text": data.text,
+            "tags": data.tags,
+            "metadata": data.metadata,
+            "ttl": data.ttl,
+        }
+        for field, value in updates.items():
+            if value is not None:
+                setattr(item, field, value)
         if data.ttl is not None:
-            item.ttl = data.ttl
             item.expires_at = item.created_at + timedelta(seconds=data.ttl)
         self._items[item_id] = item
+        await self._backend_update(item_id, item, timeout, retries)
         await self._publish(MemoryEvent(action="updated", item=item))
         return item
 
-    async def delete_item(self, item_id: str) -> None:
+    async def delete_item(
+        self,
+        item_id: str,
+        *,
+        timeout: float | None = None,
+        retries: int | None = None,
+    ) -> None:
+        """Delete a memory item."""
+
+        timeout, retries = self._resolve_params(timeout, retries)
         self._purge()
         if item_id not in self._items:
             raise MemoryNotFoundError(f"item {item_id} not found")
         item = self._items.pop(item_id)
+        await self._backend_delete(item_id, timeout, retries)
         await self._publish(MemoryEvent(action="deleted", item=item))
 
     async def search_items(
@@ -243,28 +373,24 @@ class MemoryService:
         offset: int = 0,
         scope: MemoryScope | None = None,
         tags: list[str] | None = None,
+        timeout: float | None = None,
+        retries: int | None = None,
     ) -> list[MemoryItem]:
         if not query:
             raise ValueError("query must not be empty")
+        timeout, retries = self._resolve_params(timeout, retries)
         self._purge()
-        results: list[MemoryItem] = []
         try:
             if self.backend:
-                res = await _with_retry(
-                    self.backend.search, query, limit=limit + offset
+                ids = await self._backend_search(
+                    query, limit + offset, timeout, retries
                 )
-                ids = [r.get("id") for r in res]
                 results = [self._items[i] for i in ids if i in self._items]
             else:
-                for item in self._items.values():
-                    if query.lower() in item.text.lower():
-                        results.append(item)
+                results = self._local_search(query)
         except Exception as exc:  # noqa: BLE001
             raise MemoryServiceError("Failed to search memories") from exc
-        if scope:
-            results = [i for i in results if i.scope == scope]
-        if tags:
-            results = [i for i in results if set(tags).issubset(set(i.tags))]
+        results = self._apply_filters(results, scope, tags)
         return results[offset : offset + limit]
 
     async def bulk_import(self, items: list[MemoryItemCreate]) -> list[MemoryItem]:
