@@ -9,6 +9,7 @@ const customJestConfig = {
   testMatch: [
     '<rootDir>/app/(auth)/login/page.test.tsx',
     '<rootDir>/app/(auth)/register/page.test.tsx',
+    '<rootDir>/app/(dashboard)/agents/create/page.test.tsx',
   ],
 };
 
