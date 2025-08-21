@@ -25,35 +25,32 @@ class RAGService:
         self.api_key = api_key or R2R_API_KEY
 
     async def query(
-        self, query: str, *, use_kg: bool = True, limit: int = 25
+        self,
+        query: str,
+        *,
+        filters: dict[str, str] | None = None,
+        vector: bool = True,
+        keyword: bool = True,
+        graph: bool = True,
+        limit: int = 25,
     ) -> dict[str, Any]:
         if not query.strip():
             raise ValueError("query cannot be empty")
+        if not any((vector, keyword, graph)):
+            raise ValueError("at least one search mode must be enabled")
         payload = {
             "query": query,
             "rag_generation_config": {"model": "gpt-4o-mini", "temperature": 0.0},
             "search_settings": {
-                "use_hybrid_search": True,
-                "use_kg_search": use_kg,
+                "use_vector_search": vector,
+                "use_keyword_search": keyword,
+                "use_kg_search": graph,
                 "limit": limit,
             },
         }
-        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
-        last_exc: HTTPError | None = None
-        for attempt in range(3):
-            try:
-                async with AsyncClient(timeout=10) as client:
-                    resp = await client.post(
-                        f"{self.base_url}/api/retrieval/rag",
-                        json=payload,
-                        headers=headers,
-                    )
-                    resp.raise_for_status()
-                    return resp.json()
-            except HTTPError as exc:  # noqa: BLE001
-                last_exc = exc
-                await asyncio.sleep(2**attempt)
-        raise R2RServiceError("R2R request failed") from last_exc
+        if filters:
+            payload["metadata_filters"] = filters
+        return await self._post_with_retry("/api/retrieval/rag", payload)
 
     async def _post_with_retry(
         self, endpoint: str, payload: dict[str, Any]
@@ -103,10 +100,25 @@ class RAGService:
 rag_service = RAGService()
 
 
-async def rag(query: str, use_kg: bool = True, limit: int = 25) -> dict[str, Any]:
+async def rag(
+    query: str,
+    *,
+    filters: dict[str, str] | None = None,
+    vector: bool = True,
+    keyword: bool = True,
+    graph: bool = True,
+    limit: int = 25,
+) -> dict[str, Any]:
     """Compatibility wrapper for existing imports."""
 
-    return await rag_service.query(query, use_kg=use_kg, limit=limit)
+    return await rag_service.query(
+        query,
+        filters=filters,
+        vector=vector,
+        keyword=keyword,
+        graph=graph,
+        limit=limit,
+    )
 
 
 __all__ = ["RAGService", "rag_service", "rag"]
