@@ -1,0 +1,5 @@
+{
+  "extends": ["@biomejs/config"],
+  "linter": { "enabled": true },
+  "formatter": { "enabled": true }
+}
