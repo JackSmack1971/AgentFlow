@@ -6,7 +6,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from .config import get_settings
 from .middleware import AuditMiddleware
 from .rate_limiter import limiter
-from .routers import agents, auth, cache_examples, health, memory, rag
+from .routers import agents, auth, cache_examples, health, memory, rag, workflow
 from .utils.logging import setup_logging
 
 
@@ -34,5 +34,6 @@ app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(memory.router, prefix="/memory", tags=["memory"])
 app.include_router(rag.router, prefix="/rag", tags=["rag"])
 app.include_router(agents.router, prefix="/agents", tags=["agents"])
+app.include_router(workflow.router, prefix="/workflow", tags=["workflow"])
 app.include_router(health.router)
 app.include_router(cache_examples.router, tags=["cache"])
