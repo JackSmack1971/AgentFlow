@@ -4,7 +4,7 @@ import { ReadableStream } from 'stream/web';
 (global as any).TextDecoder = TextDecoder;
 (global as any).ReadableStream = ReadableStream;
 import { renderHook } from '@testing-library/react';
-import { useAgentRunner } from './useAgentRunner.ts';
+import { useAgentRunner } from '../../../hooks/useAgentRunner.ts';
 
 describe('useAgentRunner', () => {
   beforeEach(() => {
@@ -40,6 +40,18 @@ describe('useAgentRunner', () => {
     const final = await result.current.run('a');
     expect(final).toBe('ok');
     expect(calls).toBe(2);
+  });
+
+  it('throws after exhausting retries', async () => {
+    global.fetch = async () => stream([], 500);
+    const { result } = renderHook(() => useAgentRunner());
+    await expect(result.current.run('fail', { retries: 2 })).rejects.toThrow('HTTP 500');
+  });
+
+  it('handles timeout', async () => {
+    global.fetch = () => Promise.reject(new DOMException('aborted', 'AbortError'));
+    const { result } = renderHook(() => useAgentRunner());
+    await expect(result.current.run('hi', { retries: 1 })).rejects.toThrow('aborted');
   });
 
   it('validates input', async () => {
