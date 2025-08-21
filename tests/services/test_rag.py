@@ -1,3 +1,5 @@
+import json
+
 import pytest
 import respx
 from httpx import Response
@@ -24,6 +26,46 @@ async def test_rag_retries_and_fails() -> None:
     )
     with pytest.raises(R2RServiceError):
         await rag_module.rag("boom")
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_rag_hybrid_search() -> None:
+    route = respx.post(f"{rag_module.R2R_BASE}/api/retrieval/rag").mock(
+        return_value=Response(200, json={"ok": True})
+    )
+    await rag_module.rag("hi", vector=True, keyword=True, graph=False)
+    assert route.called
+    data = json.loads(route.calls.last.request.content.decode())
+    settings = data["search_settings"]
+    assert settings["use_vector_search"]
+    assert settings["use_keyword_search"]
+    assert not settings["use_kg_search"]
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_rag_metadata_filtered() -> None:
+    route = respx.post(f"{rag_module.R2R_BASE}/api/retrieval/rag").mock(
+        return_value=Response(200, json={"ok": True})
+    )
+    await rag_module.rag("filter", filters={"tag": "unit"})
+    sent = json.loads(route.calls.last.request.content.decode())
+    assert sent["metadata_filters"] == {"tag": "unit"}
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_rag_semantic_search() -> None:
+    route = respx.post(f"{rag_module.R2R_BASE}/api/retrieval/rag").mock(
+        return_value=Response(200, json={"ok": True})
+    )
+    await rag_module.rag("semantic", vector=True, keyword=False, graph=False)
+    data = json.loads(route.calls.last.request.content.decode())
+    settings = data["search_settings"]
+    assert settings["use_vector_search"]
+    assert not settings["use_keyword_search"]
+    assert not settings["use_kg_search"]
 
 
 @respx.mock
