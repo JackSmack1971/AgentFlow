@@ -9,7 +9,7 @@
     "lint": "biome check --formatter-enabled=false --assist-enabled=false .",
     "format": "biome format .",
     "type-check": "tsc --noEmit",
-    "test": "tsx lib/api.test.ts && tsx providers/auth-provider.test.ts && tsx providers/theme-provider.test.ts && tsx components/layout/error-boundary.test.ts && tsx components/layout/navigation.test.ts && tsx app/root-layout.test.ts && tsx \"app/(auth)/layout.test.tsx\" && tsx \"app/(dashboard)/agents/page.test.tsx\" && tsx \"app/(dashboard)/agents/layout.test.tsx\" && tsx \"app/(dashboard)/agents/[id]/edit/page.test.tsx\" && jest",
+    "test": "tsx lib/api.test.ts && tsx providers/auth-provider.test.ts && tsx providers/theme-provider.test.ts && tsx components/layout/error-boundary.test.ts && tsx components/layout/navigation.test.ts && tsx app/root-layout.test.ts && tsx \"app/(auth)/layout.test.tsx\" && tsx \"app/(dashboard)/agents/page.test.tsx\" && tsx \"app/(dashboard)/agents/layout.test.tsx\" && tsx \"app/(dashboard)/agents/[id]/edit/page.test.tsx\" && tsx \"app/(dashboard)/memory/page.test.tsx\" && jest",
     "test:coverage": "jest --coverage"
   },
   "dependencies": {

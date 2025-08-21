@@ -6,8 +6,12 @@ export interface MemoryItem {
   scope?: MemoryScope;
   userId?: string;
   agentId?: string;
-  runId?: string;
-  metadata?: Record<string, unknown> | null;
+  sessionId?: string;
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+  ttl?: number;
+  createdAt?: string;
+  expiresAt?: string | null;
 }
 
 export interface RAGQuery {
