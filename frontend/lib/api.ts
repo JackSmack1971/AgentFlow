@@ -1,4 +1,4 @@
-import type { MemoryItem, RagQuery, AgentPrompt, Agent } from './types.ts';
+import type { MemoryItem, RagQuery, AgentPrompt, Agent, AgentUpdate } from './types.ts';
 import { z } from 'zod';
 
 class ApiError extends Error {
@@ -32,6 +32,7 @@ const agentPromptSchema = z.object({
 
 const agentSchema = z.object({ id: z.string(), name: z.string() });
 const agentsSchema = z.array(agentSchema);
+const agentUpdateSchema = z.object({ name: z.string().min(1) });
 
 export class ApiClient {
   private baseUrl: string;
@@ -127,6 +128,40 @@ export class ApiClient {
     try {
       const data = await this.request<unknown>('/agents');
       return agentsSchema.parse(data);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError((error as Error).message);
+    }
+  }
+
+  async getAgent(id: string, init: { timeoutMs?: number; retries?: number } = {}): Promise<Agent> {
+    try {
+      const data = await this.request<unknown>(`/agents/${id}`, init);
+      return agentSchema.parse(data);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError((error as Error).message);
+    }
+  }
+
+  async updateAgent(
+    id: string,
+    updates: AgentUpdate,
+    init: { timeoutMs?: number; retries?: number } = {},
+  ): Promise<Agent> {
+    const data = agentUpdateSchema.parse(updates);
+    try {
+      const res = await this.request<unknown>(`/agents/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        ...init,
+      });
+      return agentSchema.parse(res);
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
