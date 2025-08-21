@@ -22,3 +22,7 @@ export interface Agent {
   id: string;
   name: string;
 }
+
+export interface AgentUpdate {
+  name: string;
+}
