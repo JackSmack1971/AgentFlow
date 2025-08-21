@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "biome check .",
+    "format": "biome format . --write",
     "type-check": "tsc --noEmit",
     "test": "tsx lib/api.test.ts && tsx providers/auth-provider.test.ts && tsx providers/theme-provider.test.ts && tsx components/layout/error-boundary.test.ts && tsx components/layout/navigation.test.ts && tsx app/root-layout.test.ts && tsx \"app/(auth)/layout.test.tsx\" && tsx \"app/(dashboard)/agents/page.test.tsx\" && tsx \"app/(dashboard)/agents/layout.test.tsx\" && jest",
     "test:coverage": "jest --coverage"
