@@ -11,6 +11,8 @@ This document provides essential context for AI models interacting with this pro
 *   **Primary Goal:** AgentFlow is a comprehensive AI agent development platform that unifies six leading frameworks (LangGraph, MCP, Mem0, R2R, Pydantic AI, AG2) to solve the three critical challenges in AI agent development: reliable orchestration, persistent memory management, and structured knowledge integration. The platform aims to reduce agent development time by 60-80% compared to custom integration approaches.
 *   **Business Domain:** AI/ML Platform Development, specifically focused on autonomous agent development tools and enterprise AI infrastructure.
 *   **Key Features:** Multi-level memory management, visual workflow orchestration, standardized tool integration via MCP protocol, advanced RAG capabilities, and production-ready deployment automation.
+*   **Mem0 Purpose:** Provides persistent vector memory with user, session, and
+    agent scopes. Lookups must complete in under 50ms.
 
 ## 2. Core Technologies & Stack
 
@@ -80,20 +82,22 @@ This document provides essential context for AI models interacting with this pro
         - API Server: `uvicorn apps.api.app.main:app --reload`
         - MCP Server: `python apps/mcp/server.py`
 *   **Task Configuration:** No custom task system currently configured. Standard Python project workflow with uv/pip commands.
-*   **Testing:** 
+*   **Testing:**
     - **Framework:** pytest (implied, currently minimal test setup)
     - **Command:** `pytest tests/` (expand from current placeholder)
     - **Requirements:** All new code MUST include corresponding unit tests
     - **Mocking:** Use pytest fixtures and mocks for external dependencies (databases, APIs, external services)
     - **File Naming:** `test_*.py` or `*_test.py` under `/tests` directory
     - **Integration Tests:** Test framework integrations (LangGraph, Mem0, R2R, MCP) with proper mocking
+    - **Memory Validation:** `pytest tests/services/test_memory.py -v`
 *   **CI/CD Process:** Currently not configured. Recommended: GitHub Actions workflow with automated testing, linting, security scanning, and deployment automation.
 
 ## 7. Specific Instructions for AI Collaboration
 
 *   **Framework Integration Priorities:**
     - **LangGraph:** Use PostgreSQL checkpointing for production, Redis for development. Follow stateful workflow patterns with proper error handling
-    - **Mem0:** Implement multi-level memory scoping (user/agent/session). Use semantic search with <100ms retrieval targets
+    - **Mem0:** Persistent memory engine for agent knowledge. Supports user, session, and
+        agent scopes with <50ms lookup targets
     - **R2R:** Configure for hybrid search (vector + keyword + graph). Support document processing pipeline with proper chunking
     - **MCP Protocol:** Ensure full specification compliance. Implement secure tool execution with sandboxing
     - **Pydantic AI:** Use for typed agent interfaces and configuration validation
@@ -110,7 +114,7 @@ This document provides essential context for AI models interacting with this pro
     - **Version Pinning:** Pin major versions for framework dependencies to ensure stability
 *   **Performance Requirements:**
     - Simple agent queries: <2 seconds response time
-    - Memory operations: <100ms retrieval time
+    - Memory operations: <50ms retrieval time
     - Complex workflows: <5 seconds completion time
     - Support 1000+ concurrent users per instance
 *   **Code Quality Standards:**
@@ -155,7 +159,7 @@ This document provides essential context for AI models interacting with this pro
     - Use descriptive test method names that explain the scenario being tested
 *   **Performance Testing:**
     - Validate response time requirements (<2s for simple queries, <5s for complex workflows)
-    - Test memory operation performance (<100ms retrieval)
+    - Test memory lookup performance (<50ms retrieval)
     - Load testing for concurrent user requirements (1000+ users)
 *   **Quality Gates:**
     - All tests must pass before code integration

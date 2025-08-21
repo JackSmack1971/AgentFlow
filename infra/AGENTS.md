@@ -6,6 +6,17 @@
 
 This AGENTS.md covers infrastructure components, database configurations, deployment automation, monitoring, and operational aspects of the AgentFlow platform. This includes container orchestration, database optimization, security configurations, and production deployment patterns.
 
+## Mem0 Infrastructure Requirements
+
+- **Qdrant** vector store for embeddings; set `QDRANT_URL` and `QDRANT_API_KEY`.
+- **PostgreSQL** stores memory metadata via `POSTGRES_URL`.
+- **Neo4j** *(optional)* for graph relationships; configure `NEO4J_URL`.
+- Ensure TLS and connection pooling for all services.
+- Monitor Qdrant latency (<50ms), index size, PostgreSQL connections/query time, and
+  Neo4j query latency.
+
+**Testing:** `pytest tests/services/test_memory.py -v`
+
 ## Database Architecture and Configuration
 
 ### PostgreSQL Optimization for AgentFlow
