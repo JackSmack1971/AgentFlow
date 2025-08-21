@@ -16,9 +16,27 @@ const memoryItemSchema = z.object({
   scope: z.enum(['user', 'agent', 'session', 'global']).optional(),
   userId: z.string().optional(),
   agentId: z.string().optional(),
-  runId: z.string().optional(),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  sessionId: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  ttl: z.number().int().positive().optional(),
+  createdAt: z.string().optional(),
+  expiresAt: z.string().nullable().optional(),
 });
+const memoryItemsSchema = z.array(memoryItemSchema);
+const memoryItemUpdateSchema = z.object({
+  text: z.string().min(1).optional(),
+  tags: z.array(z.string()).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  ttl: z.number().int().positive().optional(),
+});
+const listParamsSchema = z.object({
+  offset: z.number().int().min(0).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  scope: z.enum(['user', 'agent', 'session', 'global']).optional(),
+  tags: z.array(z.string()).optional(),
+});
+const searchParamsSchema = listParamsSchema.extend({ q: z.string().min(1) });
 
 const ragQuerySchema = z.object({
   query: z.string().min(1),
@@ -55,6 +73,9 @@ export class ApiClient {
         if (!res.ok) {
           throw new ApiError(`Request failed with status ${res.status}`, res.status);
         }
+        if (res.status === 204) {
+          return undefined as T;
+        }
         return (await res.json()) as T;
       } catch (error) {
         clearTimeout(timeout);
@@ -78,6 +99,77 @@ export class ApiClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError((error as Error).message);
+    }
+  }
+
+  async listMemoryItems(
+    params: z.infer<typeof listParamsSchema> = {},
+  ): Promise<MemoryItem[]> {
+    const query = listParamsSchema.parse(params);
+    const qs = new URLSearchParams();
+    if (query.offset !== undefined) qs.set('offset', String(query.offset));
+    if (query.limit !== undefined) qs.set('limit', String(query.limit));
+    if (query.scope) qs.set('scope', query.scope);
+    if (query.tags) query.tags.forEach((t) => qs.append('tags', t));
+    try {
+      const data = await this.request<unknown>(`/memory/items?${qs.toString()}`);
+      return memoryItemsSchema.parse(data);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError((error as Error).message);
+    }
+  }
+
+  async searchMemoryItems(
+    params: z.infer<typeof searchParamsSchema>,
+  ): Promise<MemoryItem[]> {
+    const query = searchParamsSchema.parse(params);
+    const qs = new URLSearchParams({ q: query.q });
+    if (query.offset !== undefined) qs.set('offset', String(query.offset));
+    if (query.limit !== undefined) qs.set('limit', String(query.limit));
+    if (query.scope) qs.set('scope', query.scope);
+    if (query.tags) query.tags.forEach((t) => qs.append('tags', t));
+    try {
+      const data = await this.request<unknown>(`/memory/search?${qs.toString()}`);
+      return memoryItemsSchema.parse(data);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError((error as Error).message);
+    }
+  }
+
+  async updateMemoryItem(
+    id: string,
+    updates: z.infer<typeof memoryItemUpdateSchema>,
+  ): Promise<MemoryItem> {
+    const data = memoryItemUpdateSchema.parse(updates);
+    try {
+      const res = await this.request<unknown>(`/memory/items/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      return memoryItemSchema.parse(res);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError((error as Error).message);
+    }
+  }
+
+  async deleteMemoryItem(id: string): Promise<void> {
+    try {
+      await this.request(`/memory/items/${id}`, { method: 'DELETE' });
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
