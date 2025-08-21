@@ -10,6 +10,7 @@ const customJestConfig = {
     '<rootDir>/app/(auth)/login/page.test.tsx',
     '<rootDir>/app/(auth)/register/page.test.tsx',
     '<rootDir>/app/(dashboard)/agents/create/page.test.tsx',
+    '<rootDir>/components/agents/__tests__/*.test.ts?(x)',
   ],
 };
 
