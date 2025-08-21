@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { z } from 'zod';
 import ApiClient from '../../lib/api.ts';
 import type { MemoryItem } from '../../lib/types.ts';
@@ -138,13 +138,36 @@ export default function MemoryBrowser(): JSX.Element {
   const [q, setQ] = useState('');
   const [items, setItems] = useState<MemoryItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const refresh = async () => loadItems(client, q, setItems, setError);
+  const refresh = useCallback(
+    () => loadItems(client, q, setItems, setError),
+    [client, q],
+  );
 
   useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 5000);
-    return () => clearInterval(id);
-  }, [q]);
+    void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    let es: EventSource | null = null;
+    let retries = 0;
+    const connect = () => {
+      es = new EventSource(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL || ''}/memory/stream`,
+      );
+      es.onmessage = () => {
+        void refresh();
+      };
+      es.onerror = () => {
+        es?.close();
+        if (retries < 5) {
+          retries += 1;
+          setTimeout(connect, 1000 * retries);
+        }
+      };
+    };
+    connect();
+    return () => es?.close();
+  }, [refresh]);
 
   return (
     <div className="space-y-4">

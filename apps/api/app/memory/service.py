@@ -5,12 +5,18 @@ import asyncio
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Set
 
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
 from .exceptions import MemoryNotFoundError, MemoryServiceError
-from .models import MemoryItem, MemoryItemCreate, MemoryItemUpdate, MemoryScope
+from .models import (
+    MemoryEvent,
+    MemoryItem,
+    MemoryItemCreate,
+    MemoryItemUpdate,
+    MemoryScope,
+)
 
 try:  # pragma: no cover - optional dependency
     from mem0 import Memory, MemoryClient  # type: ignore
@@ -82,12 +88,28 @@ class MemoryService:
     def __init__(self, backend=_backend) -> None:
         self.backend = backend
         self._items: Dict[str, MemoryItem] = {}
+        self._subscribers: Set[asyncio.Queue[MemoryEvent]] = set()
 
     def _purge(self) -> None:
         now = datetime.now(timezone.utc)
         expired = [k for k, v in self._items.items() if v.expires_at and v.expires_at <= now]
         for k in expired:
             self._items.pop(k, None)
+
+    def subscribe(self) -> asyncio.Queue[MemoryEvent]:
+        """Register a new event subscriber."""
+        queue: asyncio.Queue[MemoryEvent] = asyncio.Queue()
+        self._subscribers.add(queue)
+        return queue
+
+    def unsubscribe(self, queue: asyncio.Queue[MemoryEvent]) -> None:
+        """Remove an event subscriber."""
+        self._subscribers.discard(queue)
+
+    async def _publish(self, event: MemoryEvent) -> None:
+        """Publish event to all subscribers."""
+        for q in self._subscribers:
+            await q.put(event)
 
     def _prepare_metadata(
         self, data: MemoryItemCreate, expires_at: Optional[datetime]
@@ -138,6 +160,7 @@ class MemoryService:
             expires_at=expires_at,
         )
         self._items[item_id] = item
+        await self._publish(MemoryEvent(action="created", item=item))
         return item
 
     async def get_item(self, item_id: str) -> MemoryItem:
@@ -175,13 +198,15 @@ class MemoryService:
             item.ttl = data.ttl
             item.expires_at = item.created_at + timedelta(seconds=data.ttl)
         self._items[item_id] = item
+        await self._publish(MemoryEvent(action="updated", item=item))
         return item
 
     async def delete_item(self, item_id: str) -> None:
         self._purge()
         if item_id not in self._items:
             raise MemoryNotFoundError(f"item {item_id} not found")
-        self._items.pop(item_id)
+        item = self._items.pop(item_id)
+        await self._publish(MemoryEvent(action="deleted", item=item))
 
     async def search_items(
         self,

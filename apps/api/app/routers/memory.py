@@ -3,11 +3,20 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+import asyncio
+from typing import AsyncGenerator
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.responses import StreamingResponse
 
 from ..dependencies import User, require_roles
-from ..memory.exceptions import MemoryNotFoundError, MemoryServiceError
-from ..memory.models import MemoryItem, MemoryItemCreate, MemoryItemUpdate, MemoryScope
+from ..memory.exceptions import (
+    MemoryNotFoundError,
+    MemoryServiceError,
+    MemoryStreamError,
+    MemoryStreamTimeoutError,
+)
+from ..memory.models import MemoryEvent, MemoryItem, MemoryItemCreate, MemoryItemUpdate, MemoryScope
 from ..memory.service import memory_service
 
 router = APIRouter()
@@ -102,3 +111,28 @@ async def search_memory_items(
     user: User = Depends(require_roles(["user"])),
 ) -> List[MemoryItem]:
     return await memory_service.search_items(q, offset=offset, limit=limit, scope=scope, tags=tags)
+
+
+@router.get("/stream", summary="Stream memory change events")
+async def stream_memory_events(
+    user: User = Depends(require_roles(["user"])),
+) -> StreamingResponse:
+    async def event_generator() -> AsyncGenerator[str, None]:
+        queue = memory_service.subscribe()
+        retries = 0
+        try:
+            while True:
+                try:
+                    event: MemoryEvent = await asyncio.wait_for(queue.get(), timeout=30)
+                    retries = 0
+                    yield f"data: {event.model_dump_json()}\n\n"
+                except asyncio.TimeoutError as exc:
+                    retries += 1
+                    if retries > 3:
+                        raise MemoryStreamTimeoutError("stream timeout") from exc
+        except MemoryStreamError:
+            yield "event: error\ndata: stream closed\n\n"
+        finally:
+            memory_service.unsubscribe(queue)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
