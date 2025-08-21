@@ -1,4 +1,4 @@
-import type { MemoryItem, RagQuery, AgentPrompt, Agent, AgentUpdate } from './types.ts';
+import type { MemoryItem, RAGQuery, AgentPrompt, Agent, AgentUpdate } from './types.ts';
 import { z } from 'zod';
 
 class ApiError extends Error {
@@ -89,7 +89,7 @@ export class ApiClient {
   /**
    * Run a RAG query.
    */
-  async runRag(query: RagQuery): Promise<unknown> {
+  async runRag(query: RAGQuery): Promise<unknown> {
     const data = ragQuerySchema.parse(query);
     try {
       return await this.request<unknown>('/rag', {

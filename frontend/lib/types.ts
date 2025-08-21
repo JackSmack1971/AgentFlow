@@ -1,14 +1,16 @@
+export type MemoryScope = "user" | "agent" | "session" | "global";
+
 export interface MemoryItem {
   id?: string;
   text: string;
-  scope?: "user" | "agent" | "session" | "global";
+  scope?: MemoryScope;
   userId?: string;
   agentId?: string;
   runId?: string;
   metadata?: Record<string, unknown> | null;
 }
 
-export interface RagQuery {
+export interface RAGQuery {
   query: string;
   useKg?: boolean;
   limit?: number;
