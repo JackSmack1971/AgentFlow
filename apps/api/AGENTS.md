@@ -21,8 +21,20 @@ This guide covers the API service located in [`app/`](app/) and supplements the 
 
 ## Mem0 Usage
 
-- Mem0 provides multi‑level (user/agent/session) memory. Interact with it through [`services/memory.py`](app/services/memory.py) and models in [`memory/models.py`](app/memory/models.py).
-- Validate incoming data before memory reads/writes and handle missing records gracefully.
+- Mem0 provides multi‑level (user/agent/session) memory. Interact with it through
+  [`services/memory.py`](app/services/memory.py) and models in
+  [`memory/models.py`](app/memory/models.py).
+- **Client Setup:**
+  - Hosted mode uses `MemoryClient(api_key=os.environ["MEM0_API_KEY"])`.
+  - OSS mode builds `Memory.from_config` with `QDRANT_URL`, `QDRANT_PORT`, and
+    `POSTGRES_URL`; `NEO4J_URL` is optional for graph storage.
+- **Patterns:**
+  - `add`: `await backend.add(text, user_id=..., agent_id=..., metadata=...)`
+  - `search`: `await backend.search(query, user_id=..., agent_id=...)`
+- **Environment Variables:** `MEM0_API_KEY`, `QDRANT_URL`, `QDRANT_PORT`,
+  `POSTGRES_URL`, optional `NEO4J_URL`. Never hardcode secrets.
+- Validate incoming data before memory reads/writes and handle missing records
+  gracefully.
 
 ## Security Requirements
 
@@ -35,3 +47,4 @@ This guide covers the API service located in [`app/`](app/) and supplements the 
 
 - Add unit tests under `tests/api/` mirroring router and service structure.
 - Each new endpoint must include tests for success and error cases.
+- Validate memory operations with `pytest tests/services/test_memory.py -v`.
