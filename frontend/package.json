@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "test": "tsx lib/api.test.ts && tsx providers/auth-provider.test.ts && tsx providers/theme-provider.test.ts && tsx components/layout/error-boundary.test.ts && tsx components/layout/navigation.test.ts && tsx app/root-layout.test.ts && tsx \"app/(auth)/layout.test.tsx\" && tsx \"app/(auth)/login/page.test.ts\" && tsx \"app/(auth)/register/page.test.ts\""
+    "test": "tsx lib/api.test.ts && tsx providers/auth-provider.test.ts && tsx providers/theme-provider.test.ts && tsx components/layout/error-boundary.test.ts && tsx components/layout/navigation.test.ts && tsx app/root-layout.test.ts && tsx \"app/(auth)/layout.test.tsx\" && jest",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
@@ -28,6 +29,12 @@
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.20.4",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "@types/jest": "^29.5.11",
+    "@testing-library/react": "^14.2.1",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/user-event": "^14.5.2",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
   }
 }
