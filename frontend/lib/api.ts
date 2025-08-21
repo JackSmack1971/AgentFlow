@@ -1,4 +1,4 @@
-import type { MemoryItem, RagQuery, AgentPrompt } from './types.ts';
+import type { MemoryItem, RagQuery, AgentPrompt, Agent } from './types.ts';
 import { z } from 'zod';
 
 class ApiError extends Error {
@@ -29,6 +29,9 @@ const ragQuerySchema = z.object({
 const agentPromptSchema = z.object({
   prompt: z.string().min(1),
 });
+
+const agentSchema = z.object({ id: z.string(), name: z.string() });
+const agentsSchema = z.array(agentSchema);
 
 export class ApiClient {
   private baseUrl: string;
@@ -112,6 +115,18 @@ export class ApiClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new ApiError((error as Error).message);
+    }
+  }
+
+  async listAgents(): Promise<Agent[]> {
+    try {
+      const data = await this.request<unknown>('/agents');
+      return agentsSchema.parse(data);
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
