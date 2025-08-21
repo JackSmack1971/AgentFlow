@@ -610,9 +610,8 @@ TESTING:
 ```bash
 # Run after each file creation - fix before proceeding
 cd frontend/
-npm run type-check              # TypeScript validation
-npm run lint                    # ESLint + Next.js linting
-npm run build                   # Next.js build validation
+npm run lint   # Biome linting
+npm run format # optional formatting
 
 # Expected: Zero errors. If errors exist, READ output and fix before proceeding.
 ```
@@ -701,7 +700,7 @@ npm run test:security
 - [ ] All 4 validation levels completed successfully
 - [ ] All tests pass: `npm run test`
 - [ ] No TypeScript errors: `npm run type-check`
-- [ ] No linting errors: `npm run lint`
+- [ ] No Biome linting errors: `npm run lint`
 - [ ] Production build successful: `npm run build`
 - [ ] Frontend-backend integration working: API calls succeed
 
