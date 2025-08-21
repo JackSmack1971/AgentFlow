@@ -19,7 +19,20 @@ def reset_service() -> None:
 
 @pytest.mark.asyncio
 async def test_stream_memory_events(monkeypatch: pytest.MonkeyPatch) -> None:
-    queue: asyncio.Queue[MemoryEvent] = asyncio.Queue()
+    """Stream emits a memory event via server-sent events."""
+
+    class OneShotQueue(asyncio.Queue[MemoryEvent]):
+        def __init__(self) -> None:
+            super().__init__()
+            self._used = False
+
+        async def get(self) -> MemoryEvent:
+            if self._used:
+                raise asyncio.CancelledError
+            self._used = True
+            return await super().get()
+
+    queue = OneShotQueue()
     monkeypatch.setattr(memory_router.memory_service, "subscribe", lambda: queue)
     monkeypatch.setattr(memory_router.memory_service, "unsubscribe", lambda q: None)
     item = MemoryItem(
@@ -43,13 +56,17 @@ async def test_stream_memory_events(monkeypatch: pytest.MonkeyPatch) -> None:
         sender = asyncio.create_task(send_event())
         async with ac.stream("GET", "/memory/stream") as resp:
             assert resp.status_code == 200
+            assert resp.headers["content-type"].startswith("text/event-stream")
             line = await resp.aiter_lines().__anext__()
             assert line == f"data: {event.model_dump_json()}"
+            await resp.aclose()
         await sender
 
 
 @pytest.mark.asyncio
 async def test_update_item_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Update returns 404 when memory item is missing."""
+
     async def fake_update(*args: object, **kwargs: object) -> None:
         raise MemoryNotFoundError("missing")
 
@@ -58,10 +75,13 @@ async def test_update_item_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.put("/memory/items/404", json={"text": "x"})
         assert resp.status_code == 404
+        assert resp.json()["detail"] == "missing"
 
 
 @pytest.mark.asyncio
 async def test_delete_item_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Delete returns 404 when memory item is missing."""
+
     async def fake_delete(*args: object, **kwargs: object) -> None:
         raise MemoryNotFoundError("missing")
 
@@ -70,3 +90,4 @@ async def test_delete_item_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.delete("/memory/items/404")
         assert resp.status_code == 404
+        assert resp.json()["detail"] == "missing"
