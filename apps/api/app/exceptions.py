@@ -51,3 +51,11 @@ class OTPError(AuthenticationError):
 
 class CacheError(AgentFlowError):
     """Raised when cache operations fail."""
+
+
+class MetricsError(AgentFlowError):
+    """Raised when metrics calculations fail."""
+
+
+class InvalidRatingError(MetricsError):
+    """Raised when provided ratings are invalid."""
