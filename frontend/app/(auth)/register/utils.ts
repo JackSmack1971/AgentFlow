@@ -20,7 +20,7 @@ export class RegisterError extends Error {
   }
 }
 
-type Client = {
+export type Client = {
   request: (
     endpoint: string,
     init?: RequestInit & { timeoutMs?: number; retries?: number },
