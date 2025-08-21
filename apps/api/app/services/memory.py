@@ -1,4 +1,11 @@
-"""In-memory memory service with optional Mem0 backend."""
+"""Memory service layer.
+
+This module provides the memory service used by the API routers. It mirrors the
+functionality defined for the memory router and exposes an asynchronous
+interface for managing memory items. The implementation wraps the optional
+`mem0` backend when available and falls back to in-memory storage for tests.
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -9,8 +16,8 @@ from typing import Any, Dict, List, Optional, Tuple, Set
 
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
-from .exceptions import MemoryNotFoundError, MemoryServiceError
-from .models import (
+from ..memory.exceptions import MemoryNotFoundError, MemoryServiceError
+from ..memory.models import (
     MemoryEvent,
     MemoryItem,
     MemoryItemCreate,
@@ -22,6 +29,7 @@ try:  # pragma: no cover - optional dependency
     from mem0 import Memory, MemoryClient  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover
     Memory = MemoryClient = None  # type: ignore
+
 
 MEM0_MODE = os.getenv("MEM0_MODE", "oss")
 if Memory is not None and MemoryClient is not None:
@@ -71,6 +79,8 @@ async def _with_retry(
     timeout: float = 5,
     **kwargs,
 ):
+    """Execute a blocking function in a thread with retry and timeout."""
+
     async for attempt in AsyncRetrying(
         stop=stop_after_attempt(retries + 1),
         wait=wait_exponential(multiplier=0.1),
@@ -98,16 +108,19 @@ class MemoryService:
 
     def subscribe(self) -> asyncio.Queue[MemoryEvent]:
         """Register a new event subscriber."""
+
         queue: asyncio.Queue[MemoryEvent] = asyncio.Queue()
         self._subscribers.add(queue)
         return queue
 
     def unsubscribe(self, queue: asyncio.Queue[MemoryEvent]) -> None:
         """Remove an event subscriber."""
+
         self._subscribers.discard(queue)
 
     async def _publish(self, event: MemoryEvent) -> None:
         """Publish event to all subscribers."""
+
         for q in self._subscribers:
             await q.put(event)
 
@@ -115,6 +128,7 @@ class MemoryService:
         self, data: MemoryItemCreate, expires_at: Optional[datetime]
     ) -> Dict[str, Any]:
         """Build metadata payload for backend insertion."""
+
         return {
             **data.metadata,
             "scope": data.scope.value,
@@ -126,6 +140,7 @@ class MemoryService:
         self, data: MemoryItemCreate, meta: Dict[str, Any]
     ) -> Tuple[str, List[float]]:
         """Insert memory into backend and return new item id and embedding."""
+
         if not self.backend:
             return str(uuid.uuid4()), []
         try:
@@ -253,3 +268,9 @@ class MemoryService:
 
 
 memory_service = MemoryService()
+
+__all__ = [
+    "MemoryService",
+    "memory_service",
+]
+

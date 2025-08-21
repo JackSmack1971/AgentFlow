@@ -17,7 +17,7 @@ from ..memory.exceptions import (
     MemoryStreamTimeoutError,
 )
 from ..memory.models import MemoryEvent, MemoryItem, MemoryItemCreate, MemoryItemUpdate, MemoryScope
-from ..memory.service import memory_service
+from ..services.memory import memory_service
 
 router = APIRouter()
 
