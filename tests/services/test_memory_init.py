@@ -1,45 +1,28 @@
-import importlib
-import sys
-import types
 import pytest
 
-from apps.api.app.services import memory as memory_service_module
 from apps.api.app.memory.exceptions import MemoryServiceError
+from apps.api.app.services import memory as memory_service_module
 
 
-@pytest.mark.asyncio
-async def test_hosted_mode_initialization_success(monkeypatch) -> None:
-    monkeypatch.setenv("MEM0_MODE", "hosted")
-    monkeypatch.setenv("MEM0_API_KEY", "testkey")
-
-    class DummyMemoryClient:
-        def __init__(self, api_key: str) -> None:  # pragma: no cover - simple stub
-            self.api_key = api_key
-    dummy_mem0 = types.SimpleNamespace(Memory=object(), MemoryClient=DummyMemoryClient)
-    monkeypatch.setitem(sys.modules, "mem0", dummy_mem0)
-    importlib.reload(memory_service_module)
-    assert isinstance(memory_service_module._backend, DummyMemoryClient)
-
-    monkeypatch.delenv("MEM0_MODE", raising=False)
-    monkeypatch.delenv("MEM0_API_KEY", raising=False)
-    monkeypatch.delitem(sys.modules, "mem0", raising=False)
-    importlib.reload(memory_service_module)
-
-
-@pytest.mark.asyncio
-async def test_hosted_mode_initialization_missing_key(monkeypatch) -> None:
-    monkeypatch.setenv("MEM0_MODE", "hosted")
-    monkeypatch.delenv("MEM0_API_KEY", raising=False)
-
-    class DummyMemoryClient:
-        def __init__(self, api_key: str) -> None:  # pragma: no cover - simple stub
-            self.api_key = api_key
-
-    dummy_mem0 = types.SimpleNamespace(Memory=object(), MemoryClient=DummyMemoryClient)
-    monkeypatch.setitem(sys.modules, "mem0", dummy_mem0)
+def test_missing_openai_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.setattr(memory_service_module, "Memory", object())
+    monkeypatch.setattr(memory_service_module, "MemoryClient", object())
     with pytest.raises(MemoryServiceError):
-        importlib.reload(memory_service_module)
+        memory_service_module._init_backend()
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
 
-    monkeypatch.delenv("MEM0_MODE", raising=False)
-    monkeypatch.delitem(sys.modules, "mem0", raising=False)
-    importlib.reload(memory_service_module)
+
+def test_invalid_openai_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "bad")
+
+    class DummyMemory:
+        @staticmethod
+        def from_config(_config: dict) -> None:  # pragma: no cover - simple stub
+            raise MemoryServiceError("invalid key")
+
+    monkeypatch.setattr(memory_service_module, "Memory", DummyMemory)
+    monkeypatch.setattr(memory_service_module, "MemoryClient", object())
+    with pytest.raises(MemoryServiceError):
+        memory_service_module._init_backend()
+    monkeypatch.setenv("OPENAI_API_KEY", "test")

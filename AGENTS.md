@@ -272,6 +272,8 @@ This document provides essential context for AI models interacting with this pro
 *   **Environment Configuration:**
     - Use environment-specific `.env` files (never commit `.env` with secrets)
     - Validate all required environment variables on application startup
+    - Required variables: `OPENAI_API_KEY`, `MEM0_API_KEY` (hosted mode),
+      `QDRANT_URL`, `QDRANT_PORT`, `POSTGRES_URL`
     - Use secure secret management systems in production (AWS Secrets Manager, Azure Key Vault)
 *   **Database Setup:**
     - PostgreSQL with connection pooling and SSL enabled

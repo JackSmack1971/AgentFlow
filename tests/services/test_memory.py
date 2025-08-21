@@ -1,13 +1,18 @@
-import pytest
+import os
 from datetime import datetime, timedelta, timezone
 
-from apps.api.app.services.memory import memory_service as mem_service
+import pytest
+
+os.environ.setdefault("OPENAI_API_KEY", "test")
+
 from apps.api.app.memory.exceptions import MemoryNotFoundError, MemoryServiceError
 from apps.api.app.memory.models import (
     MemoryItemCreate,
     MemoryItemUpdate,
     MemoryScope,
 )
+from apps.api.app.services.memory import memory_service as mem_service
+
 
 class DummyBackend:
     def add(self, *_, **__):
@@ -15,6 +20,7 @@ class DummyBackend:
 
     def search(self, *_, **__):
         return [{"id": "1", "text": "hi"}]
+
 
 @pytest.mark.asyncio
 async def test_add_memory(monkeypatch) -> None:
@@ -44,6 +50,7 @@ async def test_add_memory_retry_success(monkeypatch) -> None:
     assert result.id == "1"
     assert calls == 2
 
+
 @pytest.mark.asyncio
 async def test_add_memory_error(monkeypatch) -> None:
     calls = 0
@@ -61,6 +68,7 @@ async def test_add_memory_error(monkeypatch) -> None:
         await mem_service.add_item(data)
     assert calls == 2
 
+
 @pytest.mark.asyncio
 async def test_search_error(monkeypatch) -> None:
     calls = 0
@@ -75,6 +83,7 @@ async def test_search_error(monkeypatch) -> None:
     with pytest.raises(MemoryServiceError):
         await mem_service.search_items("hi")
     assert calls == 2
+
 
 @pytest.mark.asyncio
 async def test_search_validation() -> None:
@@ -95,7 +104,9 @@ async def test_search_backend_success(monkeypatch) -> None:
 async def test_get_list_and_purge(monkeypatch) -> None:
     monkeypatch.setattr(mem_service, "backend", None)
     mem_service._items.clear()
-    item = await mem_service.add_item(MemoryItemCreate(text="hi", user_id="u", tags=["a"]))
+    item = await mem_service.add_item(
+        MemoryItemCreate(text="hi", user_id="u", tags=["a"])
+    )
     await mem_service.add_item(
         MemoryItemCreate(text="bye", user_id="u", scope=MemoryScope.GLOBAL, tags=["b"])
     )
@@ -138,7 +149,9 @@ async def test_search_success_filters(monkeypatch) -> None:
     monkeypatch.setattr(mem_service, "backend", None)
     mem_service._items.clear()
     item = await mem_service.add_item(
-        MemoryItemCreate(text="hello world", user_id="u", tags=["x"], scope=MemoryScope.USER)
+        MemoryItemCreate(
+            text="hello world", user_id="u", tags=["x"], scope=MemoryScope.USER
+        )
     )
     await mem_service.add_item(
         MemoryItemCreate(text="bye", user_id="u", tags=["y"], scope=MemoryScope.GLOBAL)
