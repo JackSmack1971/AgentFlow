@@ -374,6 +374,9 @@ LOG_LEVEL=INFO
 DEBUG=false
 ```
 
+> **Required:** `OPENAI_API_KEY` must be set for memory initialization. Use
+> `MEM0_API_KEY` when `MEM0_MODE=hosted`.
+
 ### Service Configuration
 
 <details>

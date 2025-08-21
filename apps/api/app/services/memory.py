@@ -9,10 +9,11 @@ interface for managing memory items. The implementation wraps the optional
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional, Tuple, Set
+from typing import Any
 
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
@@ -28,57 +29,65 @@ from ..memory.models import (
 try:  # pragma: no cover - optional dependency
     from mem0 import Memory, MemoryClient  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover
-    Memory = MemoryClient = None  # type: ignore
+    Memory = MemoryClient = None
 
 
-MEM0_MODE = os.getenv("MEM0_MODE", "oss")
-if Memory is not None and MemoryClient is not None:
-    if MEM0_MODE == "hosted":
-        api_key = os.getenv("MEM0_API_KEY")
-        if not api_key:
-            raise MemoryServiceError("MEM0_API_KEY is required for hosted mode")
-        try:
-            _backend = MemoryClient(api_key=api_key)
-        except Exception:  # pragma: no cover
-            _backend = None
-    else:
-        try:
-            _backend = Memory.from_config(
-                {
-                    "vector_store": {
-                        "provider": "qdrant",
-                        "config": {"host": "localhost", "port": 6333},
-                    },
-                    "llm": {
-                        "provider": "openai",
-                        "config": {
-                            "api_key": os.getenv("OPENAI_API_KEY", ""),
-                            "model": "gpt-4o-mini",
-                        },
-                    },
-                    "embedder": {
-                        "provider": "openai",
-                        "config": {
-                            "api_key": os.getenv("OPENAI_API_KEY", ""),
-                            "model": "text-embedding-3-small",
-                        },
-                    },
-                    "version": "v1.1",
-                }
-            )
-        except Exception:  # pragma: no cover
-            _backend = None
-else:  # pragma: no cover
-    _backend = None
+logger = logging.getLogger(__name__)
+
+
+def _init_backend() -> Any | None:
+    """Initialize the Mem0 backend with configuration validation."""
+
+    if Memory is None or MemoryClient is None:  # pragma: no cover - mem0 optional
+        return None
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if not openai_key:
+        logger.error("OPENAI_API_KEY is required for memory backend")
+        raise MemoryServiceError("OPENAI_API_KEY is required for memory backend")
+    mem0_mode = os.getenv("MEM0_MODE", "oss")
+    try:
+        if mem0_mode == "hosted":
+            api_key = os.getenv("MEM0_API_KEY")
+            if not api_key:
+                raise MemoryServiceError("MEM0_API_KEY is required for hosted mode")
+            return MemoryClient(api_key=api_key)
+        config = {
+            "vector_store": {
+                "provider": "qdrant",
+                "config": {"host": "localhost", "port": 6333},
+            },
+            "llm": {
+                "provider": "openai",
+                "config": {"api_key": openai_key, "model": "gpt-4o-mini"},
+            },
+            "embedder": {
+                "provider": "openai",
+                "config": {"api_key": openai_key, "model": "text-embedding-3-small"},
+            },
+            "version": "v1.1",
+        }
+        return Memory.from_config(config)
+    except MemoryServiceError:
+        raise
+    except Exception:  # noqa: BLE001
+        logger.exception("Memory backend initialization failed")
+        return None
+
+
+try:
+    _backend = _init_backend()
+except MemoryServiceError as exc:
+    logger.error("Backend initialization failed: %s", exc)
+    raise
 
 
 async def _with_retry(
-    func,
-    *args,
+    func: Any,
+    *args: Any,
     retries: int = 1,
     timeout: float = 5,
-    **kwargs,
-):
+    **kwargs: Any,
+) -> Any:
     """Execute a blocking function in a thread with retry and timeout."""
 
     async for attempt in AsyncRetrying(
@@ -95,14 +104,16 @@ async def _with_retry(
 class MemoryService:
     """Service managing memory items with TTL and scoping."""
 
-    def __init__(self, backend=_backend) -> None:
+    def __init__(self, backend: Any | None = _backend) -> None:
         self.backend = backend
-        self._items: Dict[str, MemoryItem] = {}
-        self._subscribers: Set[asyncio.Queue[MemoryEvent]] = set()
+        self._items: dict[str, MemoryItem] = {}
+        self._subscribers: set[asyncio.Queue[MemoryEvent]] = set()
 
     def _purge(self) -> None:
         now = datetime.now(timezone.utc)
-        expired = [k for k, v in self._items.items() if v.expires_at and v.expires_at <= now]
+        expired = [
+            k for k, v in self._items.items() if v.expires_at and v.expires_at <= now
+        ]
         for k in expired:
             self._items.pop(k, None)
 
@@ -125,8 +136,8 @@ class MemoryService:
             await q.put(event)
 
     def _prepare_metadata(
-        self, data: MemoryItemCreate, expires_at: Optional[datetime]
-    ) -> Dict[str, Any]:
+        self, data: MemoryItemCreate, expires_at: datetime | None
+    ) -> dict[str, Any]:
         """Build metadata payload for backend insertion."""
 
         return {
@@ -137,8 +148,8 @@ class MemoryService:
         }
 
     async def _insert_backend(
-        self, data: MemoryItemCreate, meta: Dict[str, Any]
-    ) -> Tuple[str, List[float]]:
+        self, data: MemoryItemCreate, meta: dict[str, Any]
+    ) -> tuple[str, list[float]]:
         """Insert memory into backend and return new item id and embedding."""
 
         if not self.backend:
@@ -173,6 +184,7 @@ class MemoryService:
             embedding=embedding,
             created_at=created_at,
             expires_at=expires_at,
+            ttl=data.ttl,
         )
         self._items[item_id] = item
         await self._publish(MemoryEvent(action="created", item=item))
@@ -190,9 +202,9 @@ class MemoryService:
         *,
         offset: int = 0,
         limit: int = 50,
-        scope: Optional[MemoryScope] = None,
-        tags: Optional[List[str]] = None,
-    ) -> List[MemoryItem]:
+        scope: MemoryScope | None = None,
+        tags: list[str] | None = None,
+    ) -> list[MemoryItem]:
         self._purge()
         items = list(self._items.values())
         if scope:
@@ -229,16 +241,18 @@ class MemoryService:
         *,
         limit: int = 10,
         offset: int = 0,
-        scope: Optional[MemoryScope] = None,
-        tags: Optional[List[str]] = None,
-    ) -> List[MemoryItem]:
+        scope: MemoryScope | None = None,
+        tags: list[str] | None = None,
+    ) -> list[MemoryItem]:
         if not query:
             raise ValueError("query must not be empty")
         self._purge()
-        results: List[MemoryItem] = []
+        results: list[MemoryItem] = []
         try:
             if self.backend:
-                res = await _with_retry(self.backend.search, query, limit=limit + offset)
+                res = await _with_retry(
+                    self.backend.search, query, limit=limit + offset
+                )
                 ids = [r.get("id") for r in res]
                 results = [self._items[i] for i in ids if i in self._items]
             else:
@@ -253,7 +267,7 @@ class MemoryService:
             results = [i for i in results if set(tags).issubset(set(i.tags))]
         return results[offset : offset + limit]
 
-    async def bulk_import(self, items: List[MemoryItemCreate]) -> List[MemoryItem]:
+    async def bulk_import(self, items: list[MemoryItemCreate]) -> list[MemoryItem]:
         return await asyncio.gather(*(self.add_item(i) for i in items))
 
     async def bulk_export(
@@ -261,9 +275,9 @@ class MemoryService:
         *,
         offset: int = 0,
         limit: int = 100,
-        scope: Optional[MemoryScope] = None,
-        tags: Optional[List[str]] = None,
-    ) -> List[MemoryItem]:
+        scope: MemoryScope | None = None,
+        tags: list[str] | None = None,
+    ) -> list[MemoryItem]:
         return await self.list_items(offset=offset, limit=limit, scope=scope, tags=tags)
 
 
@@ -273,4 +287,3 @@ __all__ = [
     "MemoryService",
     "memory_service",
 ]
-
