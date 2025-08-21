@@ -35,6 +35,30 @@ AgentFlow is a comprehensive AI agent development platform that **reduces develo
 
 ---
 
+## 🧹 Linting & Formatting
+
+The frontend uses [Biome](https://biomejs.dev) for linting and formatting.
+
+Run lint checks:
+
+```bash
+npm --prefix frontend run lint
+```
+
+Format code:
+
+```bash
+npm --prefix frontend run format
+```
+
+A [pre-commit](https://pre-commit.com/) configuration is provided to run these commands automatically:
+
+```bash
+pre-commit install
+```
+
+---
+
 ## 🏗️ System Architecture
 
 AgentFlow implements a sophisticated multi-service architecture designed for enterprise scale:
