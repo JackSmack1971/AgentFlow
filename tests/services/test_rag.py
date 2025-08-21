@@ -2,7 +2,7 @@ import json
 
 import pytest
 import respx
-from httpx import Response
+from httpx import Response, TimeoutException
 
 from apps.api.app.exceptions import R2RServiceError
 from apps.api.app.services import rag as rag_module
@@ -154,3 +154,82 @@ async def test_rag_no_filters_not_sent() -> None:
     await rag_module.rag("nofilters", filters=None)
     sent = json.loads(route.calls.last.request.content.decode())
     assert "metadata_filters" not in sent
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_rag_timeout_retries_then_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fast_sleep(_: float) -> None:  # pragma: no cover - patched
+        return None
+
+    monkeypatch.setattr(rag_module.asyncio, "sleep", fast_sleep)
+    route = respx.post(f"{rag_module.R2R_BASE}/api/retrieval/rag").mock(
+        side_effect=[TimeoutException("timeout"), Response(200, json={"ok": True})]
+    )
+    result = await rag_module.rag("timeout")
+    assert result == {"ok": True}
+    assert route.call_count == 2
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_rag_timeout_retries_and_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fast_sleep(_: float) -> None:  # pragma: no cover - patched
+        return None
+
+    monkeypatch.setattr(rag_module.asyncio, "sleep", fast_sleep)
+    route = respx.post(f"{rag_module.R2R_BASE}/api/retrieval/rag").mock(
+        side_effect=[
+            TimeoutException("timeout"),
+            TimeoutException("timeout"),
+            TimeoutException("timeout"),
+        ]
+    )
+    with pytest.raises(R2RServiceError):
+        await rag_module.rag("timeout fail")
+    assert route.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_rag_empty_query_validation() -> None:
+    with pytest.raises(ValueError):
+        await rag_module.rag("")
+
+
+@pytest.mark.asyncio
+async def test_rag_search_mode_validation() -> None:
+    with pytest.raises(ValueError):
+        await rag_module.rag("q", vector=False, keyword=False, graph=False)
+
+
+@pytest.mark.asyncio
+async def test_upload_document_too_large() -> None:
+    oversized = b"a" * (rag_module.MAX_FILE_SIZE + 1)
+    with pytest.raises(ValueError):
+        await rag_module.rag_service.upload_document(
+            oversized, filename="big.txt", content_type="text/plain"
+        )
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_upload_and_retrieve_document() -> None:
+    respx.post(f"{rag_module.R2R_BASE}/api/ingest").mock(
+        return_value=Response(200, json={"id": "1"})
+    )
+    respx.post(f"{rag_module.R2R_BASE}/api/index").mock(
+        return_value=Response(200, json={"ok": True})
+    )
+    respx.post(f"{rag_module.R2R_BASE}/api/retrieval/rag").mock(
+        return_value=Response(200, json={"results": ["doc"]})
+    )
+    upload = await rag_module.rag_service.upload_document(
+        b"content", filename="a.txt", content_type="text/plain"
+    )
+    assert upload == {"ok": True}
+    result = await rag_module.rag("content")
+    assert result == {"results": ["doc"]}
