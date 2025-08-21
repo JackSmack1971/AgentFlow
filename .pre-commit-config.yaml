@@ -1,0 +1,14 @@
+repos:
+  - repo: local
+    hooks:
+      - id: biome-check
+        name: Biome Check
+        entry: npm --prefix frontend run lint --silent
+        language: system
+        pass_filenames: false
+      - id: biome-format
+        name: Biome Format
+        entry: npx --yes --prefix frontend biome format
+        language: system
+        pass_filenames: true
+        exclude: frontend/biome\.json
