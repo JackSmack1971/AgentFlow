@@ -1,16 +1,38 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Any
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from ..dependencies import User, require_roles
 from ..exceptions import R2RServiceError
 from ..models.schemas import RAGQuery
-from ..services.rag import rag
+from ..services.rag import rag, rag_service
 
 router = APIRouter()
 
 
 @router.post("/", summary="Run RAG search")
-async def run_rag(payload: RAGQuery, user: User = Depends(require_roles(["user"]))):
+async def run_rag(
+    payload: RAGQuery, user: User = Depends(require_roles(["user"]))
+) -> dict[str, Any]:
     try:
         return await rag(payload.query, use_kg=payload.use_kg, limit=payload.limit)
+    except R2RServiceError as exc:  # pragma: no cover - error path
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.post("/documents", summary="Upload document to R2R")
+async def upload_document(
+    file: UploadFile = File(...),
+    user: User = Depends(require_roles(["user"])),
+) -> dict[str, Any]:
+    content = await file.read()
+    filename = file.filename or "upload"
+    content_type = file.content_type or "application/octet-stream"
+    try:
+        return await rag_service.upload_document(
+            content, filename=filename, content_type=content_type
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except R2RServiceError as exc:  # pragma: no cover - error path
         raise HTTPException(status_code=502, detail=str(exc)) from exc
