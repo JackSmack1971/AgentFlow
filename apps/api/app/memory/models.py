@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 
 from pydantic import BaseModel, Field, validator
 
@@ -59,3 +59,10 @@ class MemoryItem(MemoryItemBase):
         if value is None and ttl is not None:
             return values["created_at"] + timedelta(seconds=ttl)
         return value
+
+
+class MemoryEvent(BaseModel):
+    """Event emitted when memory changes."""
+
+    action: Literal["created", "updated", "deleted"]
+    item: MemoryItem
