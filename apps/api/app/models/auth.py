@@ -1,5 +1,7 @@
 """Pydantic models for authentication."""
 
+from typing import Literal
+
 from pydantic import BaseModel, EmailStr
 
 
@@ -37,3 +39,7 @@ class UserInfo(BaseModel):
 class RegisterResponse(BaseModel):
     otp_secret: str
     status: str = "ok"
+
+
+class LogoutResponse(BaseModel):
+    status: Literal["ok"] = "ok"
