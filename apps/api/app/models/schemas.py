@@ -35,3 +35,7 @@ class RAGQuery(BaseModel):
 
 class AgentPrompt(BaseModel):
     prompt: str
+
+
+class AgentRunResponse(BaseModel):
+    result: str
