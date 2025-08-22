@@ -1,10 +1,8 @@
-"""FastAPI middleware for audit logging and correlation IDs."""
-
 from __future__ import annotations
 
 import json
 import time
-import uuid
+from collections.abc import Awaitable, Callable
 from contextlib import suppress
 
 from loguru import logger
@@ -14,14 +12,22 @@ from starlette.responses import Response
 
 
 class MiddlewareError(Exception):
-    """Custom exception for middleware errors."""
+    """Custom exception for audit middleware errors."""
 
 
 class AuditMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next) -> Response:  # type: ignore[override]
-        correlation_id = str(uuid.uuid4())
-        request.state.correlation_id = correlation_id
-        body = await request.body()
+    """Log basic request audit information."""
+
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        correlation_id = getattr(request.state, "correlation_id", "")
+        try:
+            body = await request.body()
+        except Exception as exc:  # pragma: no cover - best effort
+            raise MiddlewareError("Failed to read body") from exc
         request._body = body
         start = time.time()
         try:
@@ -37,7 +43,6 @@ class AuditMiddleware(BaseHTTPMiddleware):
         if event == "auth":
             with suppress(Exception):  # pragma: no cover - best effort
                 email = json.loads(body.decode()).get("email")
-            response.headers["X-Correlation-ID"] = correlation_id
         logger.info(
             "audit",
             event=event,
