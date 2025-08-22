@@ -2,10 +2,10 @@
 
 from typing import Literal
 
-from pydantic import BaseModel
+from .base import StrictModel
 
 
-class HealthStatus(BaseModel):
+class HealthStatus(StrictModel):
     """Represents the health status of the service."""
 
     status: Literal["ok", "ready"]
