@@ -9,13 +9,17 @@ from loguru import logger
 
 from ..config import Settings, get_settings
 from ..exceptions import HealthCheckError
+from ..models.health import HealthStatus
 
 router = APIRouter()
 
 
 async def check_postgres(dsn: str, timeout: float = 5.0) -> None:
     try:
-        conn = await asyncio.wait_for(psycopg.AsyncConnection.connect(dsn), timeout)
+        conn = await asyncio.wait_for(
+            psycopg.AsyncConnection.connect(dsn),
+            timeout,
+        )
         await conn.execute("SELECT 1")
         await conn.close()
     except Exception as exc:  # noqa: BLE001
@@ -32,13 +36,15 @@ async def check_redis(url: str, timeout: float = 5.0) -> None:
         await client.close()
 
 
-@router.get("/health", tags=["health"])
-async def health() -> dict:
-    return {"status": "ok"}
+@router.get("/health", response_model=HealthStatus, tags=["health"])
+async def health() -> HealthStatus:
+    return HealthStatus(status="ok")
 
 
-@router.get("/readiness", tags=["health"])
-async def readiness(settings: Settings = Depends(get_settings)) -> dict:
+@router.get("/readiness", response_model=HealthStatus, tags=["health"])
+async def readiness(
+    settings: Settings = Depends(get_settings),
+) -> HealthStatus:
     try:
         await asyncio.gather(
             check_postgres(settings.database_url),
@@ -50,4 +56,4 @@ async def readiness(settings: Settings = Depends(get_settings)) -> dict:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"{exc.service} unavailable",
         ) from exc
-    return {"status": "ready"}
+    return HealthStatus(status="ready")
