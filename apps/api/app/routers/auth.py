@@ -1,20 +1,13 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Header, Request
-from ..rate_limiter import limiter
+from fastapi import APIRouter, Header, HTTPException, Request
 from loguru import logger
 
 from ..exceptions import InvalidCredentialsError, OTPError, TokenError
-from ..models.auth import (
-    LoginRequest,
-    RefreshRequest,
-    ResetRequest,
-    ResetResponse,
-    TokenResponse,
-    UserCreate,
-    UserInfo,
-    RegisterResponse,
-)
+from ..models.auth import (LoginRequest, LogoutResponse, RefreshRequest,
+                           RegisterResponse, ResetRequest, ResetResponse,
+                           TokenResponse, UserCreate, UserInfo)
+from ..rate_limiter import limiter
 from ..services import auth as auth_service
 
 router = APIRouter()
@@ -66,15 +59,15 @@ async def refresh(request: Request, token: RefreshRequest) -> TokenResponse:
         raise HTTPException(status_code=401, detail=str(exc))
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=LogoutResponse)
 @limiter.limit("5/minute")
-async def logout(request: Request, token: RefreshRequest) -> dict:
+async def logout(request: Request, token: RefreshRequest) -> LogoutResponse:
     try:
         if await auth_service.is_refresh_token_blacklisted(token.refresh_token):
             raise TokenError("Invalid refresh token")
         await auth_service.verify_refresh_token(token.refresh_token)
         await auth_service.revoke_refresh_token(token.refresh_token)
-        return {"status": "ok"}
+        return LogoutResponse()
     except TokenError as exc:
         raise HTTPException(status_code=401, detail=str(exc))
 

@@ -22,6 +22,7 @@ import pyotp  # noqa: E402
 from apps.api.app import config  # noqa: E402
 from apps.api.app.core.cache import Cache  # noqa: E402
 from apps.api.app.main import app  # noqa: E402
+from apps.api.app.models.auth import LogoutResponse  # noqa: E402
 from apps.api.app.services import auth as auth_service  # noqa: E402
 from apps.api.app.services import token_store  # noqa: E402
 
@@ -168,6 +169,8 @@ async def test_logout_blacklists_token() -> None:
         resp = await ac.post("/auth/logout", json={"refresh_token": token})
         assert_request_id(resp)
         assert resp.status_code == 200
+        data = LogoutResponse(**resp.json())
+        assert data.status == "ok"
         rejected = await ac.post("/auth/refresh", json={"refresh_token": token})
         assert_request_id(rejected)
         assert rejected.status_code == 401
