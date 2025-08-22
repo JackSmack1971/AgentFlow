@@ -8,9 +8,11 @@ from .deps.http import shutdown_http_client, startup_http_client
 from .middleware.audit import AuditMiddleware
 from .middleware.body_size import BodySizeLimitMiddleware
 from .middleware.correlation import CorrelationIdMiddleware
+from .middleware.errors import register_error_handlers
 from .observability.tracing import setup_tracing
 from .rate_limiter import limiter
-from .routers import agents, auth, cache_examples, health, memory, rag, workflow
+from .routers import (agents, auth, cache_examples, health, memory, rag,
+                      workflow)
 from .utils.logging import setup_logging
 
 
@@ -30,6 +32,7 @@ settings = validate_settings()
 setup_logging(settings.log_level)
 setup_tracing(settings.app_name)
 app = FastAPI(title=settings.app_name, openapi_url=settings.openapi_url)
+register_error_handlers(app)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
