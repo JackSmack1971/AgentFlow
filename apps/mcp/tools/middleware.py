@@ -21,6 +21,10 @@ class ToolExecutionError(Exception):
     """Raised when tool execution fails."""
 
 
+class ToolTimeout(ToolExecutionError):
+    """Raised when a tool exceeds its timeout."""
+
+
 class RateLimiter:
     """Simple sliding-window rate limiter."""
 
@@ -76,7 +80,7 @@ def with_middleware(
                 raise
             except TimeoutError as exc:
                 logger.error(scrub_log(f"timeout {name}"))
-                raise ToolExecutionError("timeout") from exc
+                raise ToolTimeout("timeout") from exc
             except Exception as exc:
                 logger.exception(scrub_log(f"error {name}: {exc}"))
                 raise ToolExecutionError(str(exc)) from exc
