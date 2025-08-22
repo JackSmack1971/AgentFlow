@@ -8,7 +8,8 @@ import pytest
 from mcp.server.fastmcp import Context
 from mcp.server.fastmcp.exceptions import ToolError
 
-from apps.mcp.server import mcp, ping, run_http
+from apps.mcp.server import mcp, run_http
+from apps.mcp.tools.ping import ping_tool
 
 
 @pytest.fixture
@@ -22,17 +23,18 @@ def mock_context() -> AsyncMock:
 
 @pytest.mark.asyncio
 async def test_tool_discovery() -> None:
-    """Tools should include the ping command."""
+    """Tools should include registered commands."""
     tools = await mcp.list_tools()
-    assert any(tool.name == "ping" for tool in tools)
+    names = {tool.name for tool in tools}
+    assert {"ping", "rag_search", "tools_list", "tools_health"}.issubset(names)
 
 
 @pytest.mark.asyncio
 async def test_ping_execution(mock_context: AsyncMock) -> None:
     """Ping tool should return pong and log info."""
-    result = await ping(mock_context)
-    assert result == "pong"
-    mock_context.info.assert_called_with("pong")
+    result = await ping_tool(mock_context)
+    assert result.message == "pong"
+    mock_context.info.assert_called()
 
 
 @pytest.mark.asyncio
