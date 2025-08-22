@@ -1,9 +1,9 @@
 """Pydantic models for cache operations."""
 
-from pydantic import BaseModel
+from .base import StrictModel
 
 
-class CacheEntry(BaseModel):
+class CacheEntry(StrictModel):
     """Represents a cached key-value pair."""
 
     key: str
@@ -11,7 +11,7 @@ class CacheEntry(BaseModel):
     cached: bool
 
 
-class CachePostResponse(BaseModel):
+class CachePostResponse(StrictModel):
     """Response model for cached POST requests."""
 
     id: str

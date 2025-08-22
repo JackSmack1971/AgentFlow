@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from .base import StrictModel
 
 
-class RAGSearchResponse(BaseModel):
+class RAGSearchResponse(StrictModel):
     """Schema for responses returned by RAG search."""
 
     results: list[Any]
 
 
-class DocumentUploadResponse(BaseModel):
+class DocumentUploadResponse(StrictModel):
     """Schema for responses after uploading a document."""
 
     ok: bool

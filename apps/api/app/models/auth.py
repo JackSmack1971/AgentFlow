@@ -2,10 +2,12 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr
+from pydantic import EmailStr
+
+from .base import StrictModel
 
 
-class UserCreate(BaseModel):
+class UserCreate(StrictModel):
     email: EmailStr
     password: str
 
@@ -14,32 +16,32 @@ class LoginRequest(UserCreate):
     otp_code: str
 
 
-class RefreshRequest(BaseModel):
+class RefreshRequest(StrictModel):
     refresh_token: str
 
 
-class TokenResponse(BaseModel):
+class TokenResponse(StrictModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
 
 
-class ResetRequest(BaseModel):
+class ResetRequest(StrictModel):
     email: EmailStr
 
 
-class ResetResponse(BaseModel):
+class ResetResponse(StrictModel):
     reset_token: str
 
 
-class UserInfo(BaseModel):
+class UserInfo(StrictModel):
     email: EmailStr
 
 
-class RegisterResponse(BaseModel):
+class RegisterResponse(StrictModel):
     otp_secret: str
     status: str = "ok"
 
 
-class LogoutResponse(BaseModel):
+class LogoutResponse(StrictModel):
     status: Literal["ok"] = "ok"
