@@ -14,8 +14,9 @@ os.environ.setdefault("OPENAI_API_KEY", "test")
 os.environ.setdefault("SECRET_KEY", "test")
 os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
 
-from apps.api.app import config
-from apps.api.app.exceptions import HealthCheckError
+from apps.api.app import config  # noqa: E402
+from apps.api.app.exceptions import HealthCheckError  # noqa: E402
+from apps.api.app.models.health import HealthStatus  # noqa: E402
 
 config.get_settings.cache_clear()
 mock_ai = types.ModuleType("pydantic_ai")
@@ -71,7 +72,8 @@ async def test_health() -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.get("/health")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ok"}
+    status = HealthStatus.model_validate(resp.json())
+    assert status.status == "ok"
 
 
 @pytest.mark.asyncio
@@ -82,13 +84,20 @@ async def test_readiness(monkeypatch) -> None:
     async def ok_redis(*_: object, **__: object) -> None:
         return None
 
-    monkeypatch.setattr("apps.api.app.routers.health.check_postgres", ok_postgres)
-    monkeypatch.setattr("apps.api.app.routers.health.check_redis", ok_redis)
+    monkeypatch.setattr(
+        "apps.api.app.routers.health.check_postgres",
+        ok_postgres,
+    )
+    monkeypatch.setattr(
+        "apps.api.app.routers.health.check_redis",
+        ok_redis,
+    )
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.get("/readiness")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ready"}
+    status = HealthStatus.model_validate(resp.json())
+    assert status.status == "ready"
 
 
 @pytest.mark.asyncio
