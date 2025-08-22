@@ -1,265 +1,176 @@
-# AgentFlow — Spec-Driven PRD (Updated with mem0-ai, R2R, FastAPI, Python-MCP SDK, and PydanticAI Rules)
-
-> **Audience:** OpenAI Codex (treat this PRD as executable ground truth).  
-> **Change scope:** Tightens contracts and NFRs to **exactly** follow the uploaded rulesets for memory (mem0-ai), RAG (R2R), API (FastAPI), tools (Python MCP SDK), and orchestration/types (PydanticAI).
-
----
-
-## 0) Codex Execution Rules (Read First)
-
-1) **Spec precedence.** Enforce everything in this PRD **and** the referenced rulesets; when unspecified, return:
-   ```json
-   { "code":"SPEC_GAP","error":"Unspecified behavior","detail":{"section":"<path>" } }
-````
-
-2. **Deterministic I/O, probabilistic text.** All API/tool payloads MUST validate against schemas; only model text may vary.
-
-3. **Guardrails first.** If a request violates §6, return **POLICY\_REFUSAL** (template in Appendix).
-
-4. **Environment conformance.** Pin and configure dependencies per rule files (e.g., FastAPI `0.115.12`).
-
-5. **No MCP JSON-RPC batching.** Use single-call semantics with structured `inputSchema`/`outputSchema`.
-
----
-
-## 1) Problem & Vision
-
-* **Problem:** Teams waste time wiring memory, RAG, tools, and validation.
-* **Vision:** A production-ready agent platform: FastAPI gateway + LangGraph + **mem0** memory + **R2R** knowledge + **MCP** tools + **PydanticAI** typed agents, backed by Postgres/Redis/Qdrant/Neo4j—**with ruleset-verified contracts**.
-
----
-
-## 2) Goals & Success Metrics
-
-* **Latency:** P95 ≤ 1500 ms for simple `/agents/{id}/run` (warm path).
-* **Reliability:** CI must pass: `/health` (FastAPI), mem0 config validation, `R2R.health() == ok`, MCP `list_tools`/`call_tool` contract tests.
-* **Quality:** RAG answers include **citations\[]**; memory ops persist across session; all agent outputs are **Pydantic-validated** types.
-* **Security:** JWT auth, non-wildcard CORS, HTTPS in prod.
-
----
-
-## 3) Personas & Scenarios
-
-* **Indie Dev / Power User:** fastest path to a working agent, reproducible runs, minimal ops.
-* **Team Lead:** reliability, observability, guardrails, deployment hygiene.
-* **Integrator:** must be able to 1) ingest documents to R2R and verify health, 2) configure mem0 with **matching embedding dimensions** and **correct vector store provider names**, 3) expose MCP tools with **outputSchema**.
-
-**Key Scenarios**
-
-1. **Create & Run an Agent**
-
-   * Intent: Define config (model, system prompt), run with input, get result + trace.
-   * Ideal Output: JSON with `result`, `trace_id`, `memory_writes`, `tool_calls[]`, `latency_ms`.
-
-2. **Add Knowledge & Retrieve**
-
-   * Intent: Ingest docs to R2R, run query that cites sources.
-   * Ideal Output: Answer + `citations[]` (doc ids/urls) + confidence.
-
-3. **Use Tools via MCP**
-
-   * Intent: Call a `sql.query` tool; retries on transient failures; idempotent logs.
-   * Ideal Output: Structured tool result + inclusion in trace.
-
----
-
-## 4) Functional Requirements — Spec Tightening
-
-### 4.1 Capabilities
-
-* **Agent lifecycle:** create/read/update/delete; run; list runs; fetch traces.
-* **Memory (mem0):** platform (`MemoryClient`) **or** OSS (`Memory`) modes are mutually exclusive; include `"version":"v1.1"` in config; validate provider name and dims **before init**.
-* **Knowledge (R2R):** client reachable; supports ingestion, hybrid/graph search, and RAG; expose **health** and TOML-backed config.
-* **Tools (MCP):** FastMCP server; every tool has docstring and **outputSchema**; progress reporting for long tasks; HTTP or STDIO transports per deployment.
-* **Agents (PydanticAI):** define `deps_type`, reuse singletons, declare `output_type` (prefer **NativeOutput** when supported), and implement `@agent.output_validator`.
-
-### 4.2 API (FastAPI) — Required shape & setup
-
-* **Structure:** routes in `routers/`, `config.py` with Pydantic Settings; OpenAPI path toggled via env; JWT dependency.
-* **Version pin:** `fastapi==0.115.12`.
-* **Health endpoint:** `/health` returns `{"status":"healthy","timestamp":...}`.
-
-### 4.3 Memory (mem0) — Config & ops
-
-* **OSS config** sample (**Qdrant** or **ChromaDB**), with **embedding\_model\_dims = 1536** for OpenAI `text-embedding-3-small`; **use `"chromadb"` not `"chroma"`**.
-* **Platform client:** `MemoryClient(api_key=...)` with error handling.
-* **Ops:** `add`, `search`, `get_all` with filters, `update`, `delete`, `delete_all`; always handle empty results.
-
-### 4.4 Knowledge (R2R) — Ingest, retrieve, graph
-
-* **Health check** before use; ingestion supports rich metadata; hybrid + KG search, streaming RAG optional.
-
-### 4.5 Tools (MCP) — Contracts
-
-* **List tools** returns JSON with tool schemas; **call\_tool** returns data that **matches `outputSchema`**; include progress messages for long operations.
-* **Transports:** STDIO for local; **streamable HTTP** for cloud/serverless.
-
-### 4.6 Agents (PydanticAI) — Strong typing & retries
-
-* **Output types:** `output_type=...` (Pydantic model or Union); prefer `NativeOutput` when model supports; add validator; use `ModelRetry` for recoverable errors; **tenacity** retries around runs.
-
----
-
-## 5) Bounded Acceptance Criteria (Must / Should / Must Not)
-
-### 5.1 Platform & API
-
-* **Must:** `/health` returns 200 with body above; **OpenAPI toggled** via settings (disabled in prod).
-* **Must:** Auth via JWT dependency on protected routers; non-wildcard CORS.
-* **Must Not:** run in debug/reload in production.
-
-### 5.2 Memory (mem0)
-
-* **Must:** Reject startup if `embedding_model_dims` ≠ embedder output, or provider name is `"chroma"` (should be `"chromadb"`).
-* **Must:** Exactly one mode active: Platform **or** OSS.
-* **Should:** Log operation durations for adds/searches.
-* **Must Not:** Add blank content or missing `user_id`. (Validate.)
-
-### 5.3 Knowledge (R2R)
-
-* **Must:** `client.health().status == "ok"` prior to first RAG call.
-* **Must:** RAG responses include `citations[]`; hybrid search enabled by default; KG search toggle available.
-* **Should:** Streaming RAG for long responses.
-
-### 5.4 Tools (MCP)
-
-* **Must:** Each tool: docstring + `inputSchema` + `outputSchema`; progress via `ctx.report_progress`.
-* **Must Not:** JSON-RPC batching.
-
-### 5.5 Agents (PydanticAI)
-
-* **Must:** Define `deps_type`, reuse agent singletons, declare `output_type` and `@agent.output_validator`.
-* **Should:** `ModelRetry` in tools and runs; `tenacity` wrapper with backoff.
-
----
-
-## 6) Ethical & Safety Guardrails
-
-* **Privacy:** Secrets only in env; redact PII in traces; HTTPS in prod.
-* **Bias & Harm:** Neutral tone; refuse unsafe requests with `POLICY_REFUSAL`.
-* **Scope Refusals:** Medical/legal/financial advice beyond citation.
-
-**Refusal Envelope**
-
-```json
-{ "code":"POLICY_REFUSAL","reason":"HARMFUL_CONTENT","message":"I can’t assist with that request." }
-```
-
----
-
-## 7) Data & Environment Requirements
-
-* **FastAPI:** `fastapi==0.115.12`; Python ≥3.11 recommended; Pydantic Settings; structured logging.
-* **mem0:** `MEM0_API_KEY` (platform), correct vector store provider, dims=1536 for OpenAI `text-embedding-3-small`.
-* **R2R:** Base URL (default `http://localhost:7272`), `R2R_CONFIG_NAME`/`R2R_CONFIG_PATH` as needed; TOML config for DB/embedding/LLM.
-* **MCP:** Install `mcp[cli]`; set `FASTMCP_DEBUG=false` in prod.
-
----
-
-## 8) Non-Functional Requirements (NFRs)
-
-* **Security:** JWT auth, CORS allow-list, HTTPS.
-* **Observability:** Log durations for mem0 ops; R2R logging of RAG; API structured logs.
-* **Deployability:** Uvicorn prod CMD; Docker/compose for R2R; MCP stateless HTTP for serverless.
-
----
-
-## 9) Test & Eval Plan (CI-enforced)
-
-### 9.1 Smoke
-
-* `GET /health` → 200 `{"status":"healthy"...}`.
-* **R2R health:** `client.health()["status"] == "ok"`.
-* **mem0 config check:** provider name and dims validation pass; reject `"chroma"`.
-
-### 9.2 Contract Tests
-
-* **MCP**: `list_tools` items have `inputSchema` & `outputSchema`; `call_tool` output validates.
-* **Agents**: Run returns Pydantic-validated `output_type`; validator invoked.
-
-### 9.3 Functional
-
-* **Memory:** `add` → `search` yields content; handles empty results path.
-* **RAG:** RAG query includes `citations[]` with hybrid search settings.
-
-### 9.4 Resilience
-
-* **Retries:** `tenacity` backoff around agent.run; tool `ModelRetry` path.
-
----
-
-## 10) Example Configs & Snippets
-
-### 10.1 FastAPI Settings
-
-```python
-# Pydantic Settings; disable OpenAPI in prod via env
-app = FastAPI(openapi_url=get_settings().openapi_url)
-```
-
-### 10.2 mem0 (OSS) — Qdrant with OpenAI embeddings
-
-```python
-config = {
-  "version": "v1.1",
-  "vector_store": {"provider":"qdrant","config":{"host":"localhost","port":6333,"collection_name":"memories","embedding_model_dims":1536}},
-  "llm": {"provider":"openai","config":{"model":"gpt-4o-mini"}},
-  "embedder": {"provider":"openai","config":{"model":"text-embedding-3-small"}}
-}
-memory = Memory.from_config(config)
-```
-
-### 10.3 R2R — Health & Basic RAG
-
-```python
-client = R2RClient(base_url="http://localhost:7272")
-assert client.health()["status"] == "ok"
-resp = client.retrieval.rag(
-  query="What is AgentFlow?",
-  rag_generation_config={"model":"gpt-4o-mini","temperature":0.0,"max_tokens_to_sample":2048},
-  search_settings={"use_hybrid_search":True,"limit":25}
-)
-```
-
-### 10.4 MCP — Tool with outputSchema & progress
-
-```python
-@mcp.tool()
-async def sql_query(sql: str, ctx: Context) -> dict:
-  """Execute read-only SQL and return rows+count."""
-  await ctx.info("Running SQL")
-  return {"rows":[{"n":1}], "count":1}
-```
-
-### 10.5 PydanticAI — Typed output + validator
-
-```python
-class RunResult(BaseModel):
-  result: str
-  confidence: float
-
-agent = Agent('openai:gpt-4o', output_type=RunResult)
-
-@agent.output_validator
-async def ensure_conf(ctx: RunContext[Any], out: RunResult) -> RunResult:
-  if out.confidence < 0.3:
-      raise ModelRetry("Low confidence; try again with retrieval.")
-  return out
-```
-
----
-
-## 11) Release Criteria
-
-* **Alpha → Beta:** All §9 tests green; MCP tools have output schemas; mem0 config validator enforced; R2R health + ingestion OK.
-* **Beta → GA:** CORS allow-list; HTTPS; CI performance & error budgets; OpenAPI disabled in prod; rolling deploy for R2R/DB.
-
----
-
-## 12) Appendix — Error Templates
-
-```json
-{ "code":"BAD_REQUEST","error":"Invalid mem0 config: provider='chroma'","detail":{"expected":"chromadb"} }
-{ "code":"SPEC_GAP","error":"Endpoint not defined: /agents/{id}/debug","detail":{"proposal":"Add GET for recent steps"} }
-{ "code":"POLICY_REFUSAL","error":"HARMFUL_CONTENT","detail":{"category":"security"} }
-```
+# AGENTS.md: AI Collaboration Guide
+
+This document provides essential context for AI models interacting with the AgentFlow project. Adhering to these guidelines will ensure consistency, maintain code quality, and optimize agent performance for building production-ready AI agents.
+
+## 1. Project Overview & Purpose
+
+*   **Primary Goal:** AgentFlow is a comprehensive AI agent development platform that unifies six leading frameworks (LangGraph, MCP, Mem0, R2R, Pydantic AI, AG2) to reduce AI agent development time by 60-80% compared to custom integration approaches.
+*   **Business Domain:** Enterprise AI Development Platform, Conversational AI, Agent Orchestration, Knowledge Management
+*   **Key Features:** 
+    - Multi-level memory management with persistent context and contradiction resolution
+    - Visual workflow orchestration with stateful agent workflows and error recovery
+    - Standardized tool integration via MCP-compliant tool ecosystem
+    - Advanced knowledge management with hybrid search and knowledge graphs
+    - Production-ready deployment with enterprise security and 99.5% uptime targets
+
+## 2. Core Technologies & Stack
+
+*   **Languages:** Python 3.10+, TypeScript 5.x, JavaScript ES2023
+*   **Frameworks & Runtimes:** 
+    - Backend: FastAPI 0.115.12+, Pydantic AI, LangGraph (orchestration), Mem0 (memory), R2R (RAG), AG2 (multi-agent)
+    - Frontend: Next.js 14+ with App Router, React 18+, Tailwind CSS, Biome (linting/formatting)
+*   **Databases:** PostgreSQL 12+ (primary), Redis 6+ (caching/sessions), Qdrant (vector database), Neo4j (knowledge graphs)
+*   **Key Libraries/Dependencies:** 
+    - Python: FastAPI, Pydantic v2, asyncio, pytest, black, isort, flake8, mypy, bandit
+    - TypeScript: Zod (validation), Lucide React (icons), React Hook Form, MSW (testing mocks)
+*   **Package Managers:** uv (Python - preferred), npm (JavaScript/TypeScript)
+*   **Platforms:** Linux containers, Docker, Kubernetes, AWS/Azure/GCP deployment support
+
+## 3. Architectural Patterns & Structure
+
+*   **Overall Architecture:** Microservices architecture with clear separation of concerns. FastAPI backend serving Next.js frontend, with specialized MCP server for tool integration. Follows domain-driven design principles with feature-based module organization.
+*   **Directory Structure Philosophy:**
+    *   `/apps/api/` - FastAPI backend with router-based organization (auth, memory, rag, agents, health)
+    *   `/apps/mcp/` - MCP (Model Context Protocol) server for standardized tool integration
+    *   `/frontend/` - Next.js 14+ App Router frontend (component-based architecture)
+    *   `/tests/` - Comprehensive test suite with unit, integration, and performance tests
+    *   `/infra/` - Infrastructure as code (Docker, Kubernetes, Terraform)
+    *   `/scripts/` - Development and deployment automation scripts
+*   **Module Organization:** 
+    - Backend uses FastAPI router pattern with `/app/routers/` for endpoints, `/app/services/` for business logic, `/app/models/` for Pydantic schemas
+    - Frontend uses Next.js App Router with feature-based component organization (`/components/agents/`, `/components/memory/`, etc.)
+    - MCP server follows protocol specifications with tool registration and discovery patterns
+*   **Common Patterns & Idioms:**
+    - **Async/Await:** Heavy use of asyncio for concurrent operations and non-blocking I/O
+    - **Dependency Injection:** FastAPI's dependency system for database sessions, authentication, and external services
+    - **Type Safety:** Strict TypeScript with Pydantic v2 for runtime validation and API contracts
+    - **Protocol Compliance:** MCP specification adherence for tool integration standardization
+    - **Memory Management:** Multi-level scoping (user/session/agent) with semantic search and contradiction resolution
+
+## 4. Coding Conventions & Style Guide
+
+*   **Formatting:** 
+    - Python: Follow PEP 8, use Black for formatting, isort for imports, max line length 100 characters
+    - TypeScript/JavaScript: Use Biome for linting and formatting, 2-space indentation, single quotes, trailing commas
+*   **Naming Conventions:**
+    - Python: `snake_case` for variables, functions, methods, and files; `PascalCase` for classes; `SCREAMING_SNAKE_CASE` for constants
+    - TypeScript: `camelCase` for variables, functions, methods; `PascalCase` for components, types, interfaces; `kebab-case` for file names
+    - API Routes: RESTful patterns (`/agents`, `/memory`, `/rag`) with consistent HTTP verb usage
+*   **API Design Principles:** 
+    - Follow FastAPI best practices with automatic OpenAPI documentation
+    - Use distinct Pydantic models for request (`*Create`, `*Update`) and response (`*Response`) to prevent data leakage
+    - Implement proper HTTP status codes and error handling with custom exception types
+    - Ensure idempotent operations where applicable and include proper CORS configuration
+*   **Documentation Style:** 
+    - Python: Use comprehensive docstrings following Google style with type hints
+    - TypeScript: Use JSDoc comments for all public functions, components, and complex logic
+    - API endpoints: Auto-generated documentation via FastAPI with detailed descriptions and examples
+*   **Error Handling:** 
+    - Python: Use custom exception classes inheriting from `HTTPException`, implement proper error logging
+    - TypeScript: Use `Result<T, E>` types for fallible operations, implement error boundaries in React
+    - MCP: Follow protocol error specifications with proper JSONRPC error responses
+*   **Forbidden Patterns:**
+    - **NEVER** use `any` type in TypeScript unless explicitly justified with comments
+    - **NEVER** use `@ts-ignore` or `@ts-expect-error` to suppress TypeScript errors
+    - **NEVER** hardcode secrets, API keys, or sensitive configuration in code
+    - **NEVER** skip input validation on both client and server sides
+    - **NEVER** use `dangerouslySetInnerHTML` without proper sanitization
+    - **NEVER** bypass MCP protocol specifications for tool integration
+
+## 5. Key Files & Entrypoints
+
+*   **Main Entrypoints:**
+    - Backend API: `apps/api/app/main.py` - FastAPI application with 7 routers
+    - MCP Server: `apps/mcp/server.py` - MCP protocol implementation for tool integration
+    - Frontend: `frontend/app/layout.tsx` - Next.js App Router root layout (to be implemented)
+*   **Configuration:**
+    - Python dependencies: `pyproject.toml` with uv package management
+    - Frontend dependencies: `frontend/package.json` with npm/Biome configuration
+    - Docker services: `docker-compose.yml` with 6 services (API, MCP, PostgreSQL, Redis, Qdrant, Neo4j)
+    - Environment: `.env` files for local development (never commit secrets)
+*   **CI/CD Pipeline:** `.github/workflows/lint.yml` - GitHub Actions with automated testing and linting
+
+## 6. Development & Testing Workflow
+
+*   **Local Development Environment:**
+    1. Install Python 3.10+ and uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+    2. Install Node.js 20+ and npm for frontend development
+    3. Start services: `docker compose -f docker-compose.dev.yml up -d`
+    4. Backend setup: `cd apps/api && uv install && uvicorn app.main:app --reload`
+    5. Frontend setup: `cd frontend && npm install && npm run dev`
+    6. MCP server: `cd apps/mcp && python server.py`
+*   **Build Commands:**
+    - Backend: No build step required (Python interpreted)
+    - Frontend: `cd frontend && npm run build` for production builds
+    - Docker: `docker compose build` for containerized deployments
+*   **Testing Commands:** **All new code requires corresponding unit tests.**
+    - Backend tests: `pytest tests/ -v --cov=apps` (includes unit, integration, performance tests)
+    - Frontend tests: `cd frontend && npm run test` (Jest with React Testing Library)
+    - MCP tests: `pytest tests/test_mcp.py -v` for protocol compliance
+    - **CRITICAL:** Tests must mock external dependencies (APIs, databases) using appropriate tools (pytest fixtures, MSW for frontend)
+    - Load testing: `locust -f tests/performance/locustfile.py`
+*   **Linting/Formatting Commands:** **All code MUST pass linting before committing.**
+    - Python: `black apps/ tests/ && isort apps/ tests/ && flake8 apps/ tests/ && mypy apps/`
+    - Frontend: `cd frontend && npm run lint` (Biome linting and formatting)
+    - Security: `bandit -r apps/` for Python security analysis
+*   **CI/CD Process:** GitHub Actions run automated tests, linting, type checking, and security scans on every pull request. All checks must pass before merge to main branch.
+
+## 7. Specific Instructions for AI Collaboration
+
+*   **Contribution Guidelines:**
+    - Follow the existing code architecture and patterns established in each application
+    - Ensure all new functionality includes comprehensive tests with >90% coverage
+    - Submit pull requests against the `main` branch with descriptive commit messages
+    - All code must pass automated quality checks (linting, type checking, tests, security scans)
+*   **Security:** 
+    - Implement proper input validation and sanitization for all user inputs
+    - Use environment variables for all configuration and secrets
+    - Follow OWASP security guidelines for web applications
+    - Implement rate limiting, authentication, and authorization for all API endpoints
+    - Validate all external tool integrations through MCP protocol security measures
+*   **Dependencies:** 
+    - Python: Add new dependencies via `uv add <package>` and update `pyproject.toml`
+    - Frontend: Use `npm install <package>` and ensure TypeScript type definitions are available
+    - Always review dependency licenses and security advisories before adding
+    - Prefer established, well-maintained packages with active communities
+*   **Commit Messages & Pull Requests:** 
+    - Follow Conventional Commits specification: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
+    - Include clear description of what changed, why, and any breaking changes
+    - Reference issue numbers and provide context for reviewers
+    - Ensure commit messages are complete sentences ending with periods
+*   **Avoidances/Forbidden Actions:**
+    - **DO NOT** push directly to the main branch - always use pull requests
+    - **DO NOT** commit secrets, API keys, or sensitive data to version control
+    - **DO NOT** skip tests or lower test coverage requirements
+    - **DO NOT** ignore TypeScript errors or Python type checking warnings
+    - **DO NOT** bypass security validations or authentication requirements
+    - **DO NOT** modify core framework integrations without thorough testing
+*   **Performance Requirements:**
+    - Agent creation must complete in <5 minutes (critical business requirement)
+    - API responses must be <2 seconds for simple queries, <5 seconds for complex workflows
+    - Memory retrieval operations must be <100ms, knowledge search <500ms
+    - Support minimum 1000 concurrent users per instance with 99.5% uptime
+*   **MCP Protocol Compliance:**
+    - All tool integrations MUST follow MCP specification exactly
+    - Implement proper STDIO transport communication patterns
+    - Use standardized tool registration and discovery mechanisms
+    - Handle protocol errors gracefully without breaking agent communication
+    - Provide comprehensive tool metadata and documentation
+*   **Memory System Requirements:**
+    - Implement multi-level memory scoping (user/session/agent/global)
+    - Support semantic search with vector embeddings for memory retrieval
+    - Include contradiction resolution and memory consolidation features
+    - Ensure memory operations are thread-safe and support concurrent access
+*   **Frontend Development Standards:**
+    - Use Next.js 14+ App Router exclusively (never Pages Router)
+    - Implement strict TypeScript with proper type definitions
+    - Follow accessibility guidelines (WCAG 2.1 AA compliance)
+    - Ensure mobile responsiveness and cross-browser compatibility
+    - Use server components by default, client components only when necessary
+*   **Pass/Fail Criteria:** 
+    - All tests must pass: `pytest tests/` and `npm run test`
+    - Code must pass all linting and formatting checks
+    - TypeScript compilation must succeed without errors
+    - Security scans must pass without high-severity issues
+    - Performance benchmarks must meet specified response time requirements
+    - MCP protocol compliance tests must pass for tool integration features
