@@ -5,7 +5,7 @@ import pytest
 from apps.mcp.tools.middleware import (
     RateLimiter,
     RateLimitError,
-    ToolExecutionError,
+    ToolTimeout,
     scrub_log,
     with_middleware,
 )
@@ -53,7 +53,7 @@ async def test_with_middleware_timeout() -> None:
         await asyncio.sleep(0.2)
         return "done"
 
-    with pytest.raises(ToolExecutionError):
+    with pytest.raises(ToolTimeout):
         await slow(None)
 
 
