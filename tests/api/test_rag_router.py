@@ -3,6 +3,7 @@ from httpx import ASGITransport, AsyncClient
 
 from apps.api.app.exceptions import R2RServiceError
 from apps.api.app.main import app
+from apps.api.app.models.rag import DocumentUploadResponse, RAGSearchResponse
 from apps.api.app.routers import rag as rag_router
 
 
@@ -34,7 +35,8 @@ async def test_run_rag_success(monkeypatch) -> None:
             },
         )
     assert resp.status_code == 200
-    assert resp.json() == {"results": []}
+    data = RAGSearchResponse.model_validate(resp.json())
+    assert data.results == []
 
 
 @pytest.mark.asyncio
@@ -69,7 +71,12 @@ async def test_run_rag_failure(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_upload_document_success(monkeypatch) -> None:
-    async def fake_upload(content: bytes, *, filename: str, content_type: str) -> dict:
+    async def fake_upload(
+        content: bytes,
+        *,
+        filename: str,
+        content_type: str,
+    ) -> dict:
         return {"ok": True}
 
     monkeypatch.setattr(rag_router.rag_service, "upload_document", fake_upload)
@@ -80,12 +87,18 @@ async def test_upload_document_success(monkeypatch) -> None:
             files={"file": ("a.txt", b"hello", "text/plain")},
         )
     assert resp.status_code == 200
-    assert resp.json() == {"ok": True}
+    data = DocumentUploadResponse.model_validate(resp.json())
+    assert data.ok is True
 
 
 @pytest.mark.asyncio
 async def test_upload_document_service_error(monkeypatch) -> None:
-    async def fake_upload(content: bytes, *, filename: str, content_type: str) -> dict:
+    async def fake_upload(
+        content: bytes,
+        *,
+        filename: str,
+        content_type: str,
+    ) -> dict:
         raise R2RServiceError("boom")
 
     monkeypatch.setattr(rag_router.rag_service, "upload_document", fake_upload)
@@ -101,7 +114,12 @@ async def test_upload_document_service_error(monkeypatch) -> None:
 
 @pytest.mark.asyncio
 async def test_upload_document_validation_error(monkeypatch) -> None:
-    async def fake_upload(content: bytes, *, filename: str, content_type: str) -> dict:
+    async def fake_upload(
+        content: bytes,
+        *,
+        filename: str,
+        content_type: str,
+    ) -> dict:
         raise ValueError("bad")
 
     monkeypatch.setattr(rag_router.rag_service, "upload_document", fake_upload)
