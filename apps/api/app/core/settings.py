@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     agent_retry_backoff_seconds: float = 1.0
     memory_api_timeout: float = 5.0
     memory_api_retries: int = 1
+    max_body_size: int = 1024 * 1024
+    http_timeout: float = 5.0
+    http_max_retries: int = 3
+    http_cb_failure_threshold: int = 5
+    http_cb_reset_seconds: int = 60
 
 
 @lru_cache

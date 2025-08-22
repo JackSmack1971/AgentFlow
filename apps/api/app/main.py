@@ -3,8 +3,12 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from .config import get_settings
-from .middleware import AuditMiddleware
+from .config import validate_settings
+from .deps.http import shutdown_http_client, startup_http_client
+from .middleware.audit import AuditMiddleware
+from .middleware.body_size import BodySizeLimitMiddleware
+from .middleware.correlation import CorrelationIdMiddleware
+from .observability.tracing import setup_tracing
 from .rate_limiter import limiter
 from .routers import agents, auth, cache_examples, health, memory, rag, workflow
 from .utils.logging import setup_logging
@@ -21,13 +25,19 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONRe
     except Exception as err:  # pragma: no cover - safety
         raise RateLimitError("Rate limit handler failed") from err
 
-settings = get_settings()
+
+settings = validate_settings()
 setup_logging(settings.log_level)
+setup_tracing(settings.app_name)
 app = FastAPI(title=settings.app_name, openapi_url=settings.openapi_url)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(BodySizeLimitMiddleware, max_body_size=settings.max_body_size)
 app.add_middleware(AuditMiddleware)
+app.add_event_handler("startup", startup_http_client)
+app.add_event_handler("shutdown", shutdown_http_client)
 
 # Routers
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
