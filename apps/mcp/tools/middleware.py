@@ -81,6 +81,7 @@ def with_middleware(
                 logger.exception(scrub_log(f"error {name}: {exc}"))
                 raise ToolExecutionError(str(exc)) from exc
 
+        wrapper.__globals__.update(func.__globals__)  # type: ignore[attr-defined]
         return wrapper
 
     return decorator
