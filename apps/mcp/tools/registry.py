@@ -33,3 +33,7 @@ class ToolRegistry:
     def list_tools(self) -> list[str]:
         """Return list of registered tool names."""
         return list(self._tools.keys())
+
+
+# Global registry instance for tool registration
+registry = ToolRegistry()
