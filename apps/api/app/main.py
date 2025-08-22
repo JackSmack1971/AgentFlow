@@ -1,4 +1,6 @@
-from fastapi import FastAPI, Request
+import time
+
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -11,8 +13,7 @@ from .middleware.correlation import CorrelationIdMiddleware
 from .middleware.errors import register_error_handlers
 from .observability.tracing import setup_tracing
 from .rate_limiter import limiter
-from .routers import (agents, auth, cache_examples, health, memory, rag,
-                      workflow)
+from .routers import agents, auth, cache_examples, health, memory, rag, workflow
 from .utils.logging import setup_logging
 
 
@@ -20,10 +21,20 @@ class RateLimitError(Exception):
     """Raised when handling a rate limit response fails."""
 
 
-async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+DEFAULT_RETRY_AFTER = 60
+
+
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
     """Return a JSON response for rate limit violations."""
     try:
-        return JSONResponse(status_code=429, content={"detail": "Too many requests"})
+        reset_time = getattr(exc, "reset_time", time.time() + DEFAULT_RETRY_AFTER)
+        setattr(exc, "reset_time", reset_time)
+        retry_after = max(int(reset_time - time.time()), 0)
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests"},
+            headers={"Retry-After": str(retry_after)},
+        )
     except Exception as err:  # pragma: no cover - safety
         raise RateLimitError("Rate limit handler failed") from err
 
