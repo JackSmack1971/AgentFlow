@@ -12,12 +12,12 @@ import pyotp
 
 from .. import config
 from ..exceptions import InvalidCredentialsError, OTPError, TokenError
-from .token_store import (
-    is_refresh_token_blacklisted,
-    revoke_refresh_token,
-    store_refresh_token,
-    verify_refresh_token,
-)
+from . import token_store
+
+is_refresh_token_blacklisted = token_store.is_refresh_token_blacklisted
+revoke_refresh_token = token_store.revoke_refresh_token
+store_refresh_token = token_store.store_refresh_token
+verify_refresh_token = token_store.verify_refresh_token
 
 settings = config.get_settings()
 USERS: Dict[str, str] = {}
