@@ -3,11 +3,11 @@ import pathlib
 import sys
 import types
 import uuid
+from collections.abc import Iterator
 
 import fakeredis.aioredis
 import pytest
 from httpx import ASGITransport, AsyncClient, Response
-from typing import Iterator
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 
@@ -308,6 +308,24 @@ async def test_me_unauthorized() -> None:
         resp = await ac.get("/auth/me")
         assert_correlation_id(resp)
         assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_me_bad_token() -> None:
+    original = auth_service.decode_token
+
+    async def fake_decode_token(token: str) -> str:
+        raise auth_service.TokenError("Invalid token")
+
+    auth_service.decode_token = fake_decode_token
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get("/auth/me", headers={"Authorization": "Bearer bad"})
+            assert_correlation_id(resp)
+            assert resp.status_code == 401
+    finally:
+        auth_service.decode_token = original
 
 
 @pytest.mark.asyncio
