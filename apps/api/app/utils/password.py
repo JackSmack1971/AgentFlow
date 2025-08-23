@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from passlib.context import CryptContext  # type: ignore[import-untyped]
 
 from ..exceptions import PasswordHashError
@@ -43,4 +45,26 @@ def verify_password(password: str, hashed: str) -> bool:
     try:
         return _pwd_context.verify(password, hashed)
     except Exception as exc:  # pragma: no cover - library failure
+        raise PasswordHashError("Verification failed") from exc
+
+
+async def hash_password_async(password: str) -> str:
+    """Asynchronously hash a password using a thread pool."""
+
+    try:
+        return await asyncio.to_thread(hash_password, password)
+    except PasswordHashError:
+        raise
+    except Exception as exc:  # pragma: no cover - unexpected error
+        raise PasswordHashError("Hashing failed") from exc
+
+
+async def verify_password_async(password: str, hashed: str) -> bool:
+    """Asynchronously verify a password against a hash."""
+
+    try:
+        return await asyncio.to_thread(verify_password, password, hashed)
+    except PasswordHashError:
+        raise
+    except Exception as exc:  # pragma: no cover - unexpected error
         raise PasswordHashError("Verification failed") from exc
