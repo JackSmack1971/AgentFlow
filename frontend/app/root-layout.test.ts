@@ -33,7 +33,10 @@ async function testLayout() {
   const html = renderToStaticMarkup(
     React.createElement(RootLayout, null, React.createElement(Child, null)),
   );
-  assert.ok(html.includes('<nav'));
+  assert.ok(html.includes('<header'));
+  assert.ok(html.includes('<aside'));
+  assert.ok(html.includes('md:grid'));
+  assert.ok(html.includes('md:grid-cols-[sidebar_16rem_main_1fr]'));
   await new Promise((r) => setTimeout(r, 0));
   assert.equal(storage.accessToken, 'access1');
 }
