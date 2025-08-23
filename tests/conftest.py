@@ -1,6 +1,7 @@
-import pytest_asyncio
 import pathlib
 import sys
+
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[1]))

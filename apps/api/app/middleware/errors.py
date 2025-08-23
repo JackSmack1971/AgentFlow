@@ -9,8 +9,13 @@ from fastapi.responses import JSONResponse
 from starlette import status
 
 from ..errors import AgentFlowError, DomainError, ProviderError
-from ..exceptions import (AuthenticationError, InvalidCredentialsError,
-                          OTPError, RBACError, TokenError)
+from ..exceptions import (
+    AuthenticationError,
+    InvalidCredentialsError,
+    OTPError,
+    RBACError,
+    TokenError,
+)
 
 EXCEPTION_STATUS: Dict[Type[AgentFlowError], int] = {
     AuthenticationError: status.HTTP_401_UNAUTHORIZED,

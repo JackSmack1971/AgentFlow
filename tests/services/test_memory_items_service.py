@@ -1,13 +1,14 @@
 import os
+
 import pytest
 
 os.environ.setdefault("OPENAI_API_KEY", "test")
 os.environ.setdefault("QDRANT_HOST", "localhost")
 os.environ.setdefault("QDRANT_PORT", "6333")
 
+from apps.api.app.memory.exceptions import MemoryNotFoundError
 from apps.api.app.models.schemas import MemoryItem
 from apps.api.app.services.memory_items import ScopedMemoryService
-from apps.api.app.memory.exceptions import MemoryNotFoundError
 
 
 @pytest.fixture

@@ -15,11 +15,15 @@ async def test_check_permission(session) -> None:
     await session.commit()
     allowed = await check_permission(
         session,
-        PermissionRequest(user_id=user.id, org_id=org.id, resource="agents", action="read"),
+        PermissionRequest(
+            user_id=user.id, org_id=org.id, resource="agents", action="read"
+        ),
     )
     denied = await check_permission(
         session,
-        PermissionRequest(user_id=user.id, org_id=org.id, resource="agents", action="write"),
+        PermissionRequest(
+            user_id=user.id, org_id=org.id, resource="agents", action="write"
+        ),
     )
     assert allowed is True
     assert denied is False

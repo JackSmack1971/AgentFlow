@@ -1,9 +1,10 @@
+from unittest.mock import AsyncMock
+
 import httpx
 import pytest
 import respx
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
-from unittest.mock import AsyncMock
 
 from packages.r2r.client import R2RClient
 from packages.r2r.config import R2RConfig
@@ -23,7 +24,9 @@ async def test_retries_on_503_then_success(
 ) -> None:
     client = R2RClient(config=R2RConfig(base_url="http://test"))
     monkeypatch.setattr(client, "_backoff", lambda _attempt: 0)
-    responses = [httpx.Response(503)] * failures + [httpx.Response(200, json={"hits": []})]
+    responses = [httpx.Response(503)] * failures + [
+        httpx.Response(200, json={"hits": []})
+    ]
     with respx.mock(assert_all_called=False) as respx_mock:
         route = respx_mock.post("http://test/search").mock(side_effect=responses)
         try:

@@ -16,7 +16,9 @@ from ..exceptions import AgentFlowError
 class AgentService:
     """Service wrapper around a pydantic-ai Agent with retry logic."""
 
-    def __init__(self, agent: Agent, settings_factory: Callable[[], object] = get_settings) -> None:
+    def __init__(
+        self, agent: Agent, settings_factory: Callable[[], object] = get_settings
+    ) -> None:
         self.agent = agent
         self._settings_factory = settings_factory
 
@@ -54,4 +56,3 @@ async def run_agent(prompt: str) -> str:
 
 
 __all__ = ["AgentService", "agent", "run_agent"]
-

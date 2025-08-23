@@ -29,9 +29,13 @@ class PermissionRequest(BaseModel):
 async def check_permission(session: AsyncSession, req: PermissionRequest) -> bool:
     """Return True if the user's role allows the action on the resource."""
     try:
-        stmt = select(Role.name).join(Membership).where(
-            Membership.user_id == req.user_id,
-            Membership.organization_id == req.org_id,
+        stmt = (
+            select(Role.name)
+            .join(Membership)
+            .where(
+                Membership.user_id == req.user_id,
+                Membership.organization_id == req.org_id,
+            )
         )
         role = await session.scalar(stmt)
         if not role:

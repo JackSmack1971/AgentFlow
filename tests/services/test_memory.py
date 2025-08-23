@@ -10,11 +10,7 @@ os.environ.setdefault("OPENAI_API_KEY", "test")
 
 import apps.api.app.services.memory as mem_mod
 from apps.api.app.memory.exceptions import MemoryNotFoundError, MemoryServiceError
-from apps.api.app.memory.models import (
-    MemoryItemCreate,
-    MemoryItemUpdate,
-    MemoryScope,
-)
+from apps.api.app.memory.models import MemoryItemCreate, MemoryItemUpdate, MemoryScope
 from apps.api.app.services.memory import memory_service as mem_service
 
 

@@ -1,5 +1,4 @@
 import pytest
-
 from sqlalchemy import select
 
 from apps.api.app.db.models import Organization, Role, User

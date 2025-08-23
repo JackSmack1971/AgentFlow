@@ -43,8 +43,9 @@ models_mod.ModelSettings = DummyModelSettings
 sys.modules["pydantic_ai"] = mock_ai
 sys.modules["pydantic_ai.models"] = models_mod
 
-from apps.api.app.services.agents import AgentService, run_agent as module_run_agent
 from apps.api.app.exceptions import AgentFlowError
+from apps.api.app.services.agents import AgentService
+from apps.api.app.services.agents import run_agent as module_run_agent
 
 
 @pytest.mark.asyncio
