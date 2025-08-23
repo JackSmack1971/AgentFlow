@@ -15,6 +15,7 @@
 - [Quick Reference](#quick-reference)
 - [Visual Architecture](#visual-architecture)
 - [Installation Guide](#installation-guide)
+- [Service Health Checks](#service-health-checks)
 - [Usage Instructions](#usage-instructions)
 - [Project Structure](#project-structure)
 - [Development Guide](#development-guide)
@@ -395,6 +396,27 @@ docker-compose up -d --scale api=3
 | Database connection | Verify PostgreSQL is running and credentials are correct |
 | Memory issues | Increase Docker memory limit to 8GB+ |
 | uv not found | Install uv: `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+
+## 🩺 Service Health Checks
+
+Ensure core services are responding before development or integration.
+
+```bash
+# Backend API
+curl http://localhost:8000/health
+
+# MCP server
+curl http://localhost:8001/health
+
+# Frontend
+curl http://localhost:3000
+```
+
+Run the combined health‑check script:
+
+```bash
+./scripts/dev/health-check.sh
+```
 
 ## 💻 Usage Instructions
 
