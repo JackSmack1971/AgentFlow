@@ -1,0 +1,14 @@
+# Exclude version control and secrets
+.git
+.gitignore
+secrets/
+
+# Python cache and tests
+__pycache__/
+*.pyc
+*.pyo
+tests/
+
+# Node and build artifacts
+node_modules/
+*.log
