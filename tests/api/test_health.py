@@ -8,7 +8,7 @@ from httpx import ASGITransport, AsyncClient
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 
-os.environ.setdefault("DATABASE_URL", "postgresql://localhost/test")
+os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://localhost/test")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("OPENAI_API_KEY", "test")
 os.environ.setdefault("SECRET_KEY", "test")
@@ -114,3 +114,42 @@ async def test_readiness_unavailable(monkeypatch) -> None:
         resp = await ac.get("/readiness")
     assert resp.status_code == 503
     assert resp.json() == {"detail": "postgres unavailable"}
+
+
+@pytest.mark.asyncio
+async def test_database_health(monkeypatch) -> None:
+    pool_status = {
+        "checked_in": 1,
+        "checked_out": 0,
+        "overflow": 0,
+        "current_size": 1,
+    }
+
+    def fake_pool_status() -> dict[str, int]:
+        return pool_status
+
+    monkeypatch.setattr(
+        "apps.api.app.routers.health.get_pool_status",
+        fake_pool_status,
+    )
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/health/db")
+    assert resp.status_code == 200
+    assert resp.json() == pool_status
+
+
+@pytest.mark.asyncio
+async def test_database_health_unavailable(monkeypatch) -> None:
+    def fail_pool_status() -> dict[str, int]:
+        raise RuntimeError("fail")
+
+    monkeypatch.setattr(
+        "apps.api.app.routers.health.get_pool_status",
+        fail_pool_status,
+    )
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/health/db")
+    assert resp.status_code == 503
+    assert resp.json() == {"detail": "database pool status unavailable"}
