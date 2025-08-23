@@ -1,506 +1,599 @@
 # Project Overview & Purpose
 
-This file provides essential guidance for AI agents working with the UI components located in `/frontend/components/ui/` and complex interactive components throughout the frontend. These components power the AgentFlow platform - a unified AI agent development platform that integrates six leading frameworks to reduce agent development time by 60-80%. The UI architecture supports a three-column layout with sophisticated interactive components including visual workflow editors, real-time streaming interfaces, and enterprise-grade management dashboards.
+This file provides essential guidance for AI agents working with UI components throughout the AgentFlow frontend. AgentFlow is a unified AI agent development platform that integrates six leading frameworks to reduce agent development time by 60-80%. The UI architecture emphasizes **React Server Components (RSC)** with minimal client-side JavaScript, sophisticated interactive components for workflow orchestration, and enterprise-grade real-time interfaces. All components follow Next.js 14+ App Router patterns with strong TypeScript safety and modern Rust-based tooling.
 
 ## Architecture & Key Files
 
-**Primary Technologies:** Next.js 14+ App Router, React 18+, TypeScript 5.x, Tailwind CSS, Biome linting
-**Architecture Pattern:** Three-column layout with progressive disclosure, supporting both foundational UI primitives and complex interactive components
+**Primary Technologies:** Next.js 14+ App Router, React 18+ Server Components, TypeScript 5.x (strict), Tailwind CSS, Biome (Rust-based linting), Zustand (client state), TanStack Query (API state)
+**Architecture Pattern:** Server-first with selective client hydration, three-column responsive layout, progressive disclosure
 
 ### Critical Component Structure
 ```
-frontend/components/ui/
-├── foundational/           # Base design system components
-│   ├── button.tsx             # Action components with loading states
-│   ├── input.tsx              # Form inputs with validation states
-│   ├── modal.tsx              # Modal system with focus management
-│   ├── toast.tsx              # Notification system with auto-dismiss
-│   ├── dropdown.tsx           # Dropdown menus with keyboard navigation
-│   ├── card.tsx               # Content containers for dashboard grids
-│   ├── badge.tsx              # Status indicators for agents/services
-│   ├── progress.tsx           # Progress bars for ingestion/processing
-│   ├── skeleton.tsx           # Loading placeholders for async content
-│   └── data-table.tsx         # Sortable/filterable tables for runs history
-├── interactive/            # Complex interactive components
-│   ├── node-canvas.tsx        # Visual workflow editor for LangGraph
+frontend/components/
+├── ui/                     # Foundation design system (Server Components preferred)
+│   ├── server/                # Server-only UI components
+│   │   ├── agent-card.tsx        # Dashboard agent cards (RSC)
+│   │   ├── run-history-table.tsx # Server-rendered data tables
+│   │   ├── metrics-dashboard.tsx # Performance visualization (RSC)
+│   │   └── knowledge-grid.tsx    # Document display (RSC)
+│   ├── client/               # Client components (minimize usage)
+│   │   ├── interactive-button.tsx # Buttons requiring state ('use client')
+│   │   ├── form-input.tsx        # Form inputs with validation
+│   │   ├── toast-notifications.tsx # Real-time notifications
+│   │   └── modal-dialog.tsx      # Interactive modals
+│   └── shared/               # Isomorphic components
+│       ├── badge.tsx             # Status indicators
+│       ├── card.tsx              # Content containers
+│       ├── progress.tsx          # Progress indicators
+│       └── skeleton.tsx          # Loading placeholders
+├── interactive/            # Complex client-side components
+│   ├── node-canvas.tsx        # Visual workflow editor ('use client')
 │   ├── streaming-terminal.tsx # Real-time agent response display
-│   ├── knowledge-graph.tsx    # Interactive graph visualization
-│   ├── trace-viewer.tsx       # Hierarchical execution trace display
-│   ├── memory-browser.tsx     # Multi-scope memory management interface
-│   ├── semantic-search.tsx    # Hybrid search with relevance scoring
-│   └── metrics-dashboard.tsx  # Performance visualization components
-├── layout/                 # Three-column layout components
-│   ├── app-layout.tsx         # Main three-column structure
-│   ├── navigation-sidebar.tsx # Persistent left navigation
-│   ├── content-area.tsx       # Adaptive main content region
-│   ├── context-panel.tsx      # Optional right panel for real-time data
-│   └── global-header.tsx      # User profile, org selector, search
-└── index.ts                # Export barrel for clean imports
+│   ├── knowledge-graph.tsx    # Interactive graph visualization  
+│   ├── trace-viewer.tsx       # Hierarchical execution traces
+│   ├── memory-browser.tsx     # Multi-scope memory management
+│   └── semantic-search.tsx    # Hybrid search with real-time results
+├── server-actions/         # Next.js Server Actions
+│   ├── agent-actions.ts       # Create/update/delete agents
+│   ├── memory-actions.ts      # Memory management operations
+│   ├── knowledge-actions.ts   # Document upload/processing
+│   └── auth-actions.ts        # Authentication operations
+├── providers/              # React Context providers (client-side)
+│   ├── query-provider.tsx     # TanStack Query setup
+│   ├── toast-provider.tsx     # Toast notification context
+│   └── theme-provider.tsx     # Dark/light mode context
+└── hooks/                  # Custom hooks
+    ├── use-websocket.ts       # WebSocket connection management
+    ├── use-canvas-interactions.ts # Canvas event handling
+    ├── use-streaming.ts       # EventSource stream handling
+    └── use-optimistic-updates.ts # Optimistic UI patterns
 ```
 
-**Real-time Integration Points:**
-- **WebSocket connections** for health status and live updates
-- **EventSource streams** for agent execution and ingestion progress
-- **React Query/SWR** for optimistic updates and cache management
+**Server-First Architecture:**
+- **Server Components** handle data fetching and initial rendering
+- **Server Actions** manage all mutations and form submissions  
+- **Client Components** only for interactivity requiring useState/useEffect
+- **Progressive Enhancement** ensures functionality without JavaScript
 
 ## Development Environment & Commands
 
-**Prerequisites:** Node.js 20+, npm, TypeScript 5.x compiler, WebSocket support
+**Prerequisites:** Node.js 20+, TypeScript 5.x, Biome (Rust-based tooling), Docker for backend services
 
-### Component Development Workflow
+### Next.js Development Workflow
 ```bash
-# Start frontend development server with API proxy (from /frontend/)
+# Start development with type-safe routing enabled
 npm run dev
 
-# Start with WebSocket support for real-time features
-npm run dev:ws
-
-# Run TypeScript type checking with strict mode
+# Type checking with strict TypeScript configuration
 npm run type-check
 
-# Run Biome linting and formatting
-npm run lint
-npm run format
+# Biome linting and formatting (Rust-based, fast)
+npm run lint       # Check code quality
+npm run format     # Auto-format code
 
-# Run component tests with coverage including interaction testing
-npm run test
-npm run test:coverage
+# Server Component testing
+npm run test:server
 
-# Run accessibility testing with axe-core
-npm run test:a11y
+# Client Component testing with React Testing Library
+npm run test:client
 
-# Run visual regression tests for complex components
-npm run test:visual
+# Integration testing with Server Actions
+npm run test:integration
 
-# Build for production with optimization
+# Build with RSC optimization
 npm run build
+
+# Analyze bundle for client/server code split
+npm run analyze
 ```
 
-### Real-time Feature Testing Commands
+### Data Fetching & State Management Commands
 ```bash
-# Test WebSocket connections
+# Test Server Actions with form validation
+npm run test:actions
+
+# Test TanStack Query integration
+npm run test:queries
+
+# Test WebSocket real-time features
 npm run test:websockets
 
-# Test EventSource streaming
-npm run test:streaming
-
-# Test canvas interactions (node editor)
-npm run test:canvas
-
-# Test knowledge graph rendering performance
-npm run test:graph-performance
+# Performance testing for streaming components
+npm run test:streaming-performance
 ```
 
-**CRITICAL:** All interactive components MUST handle connection failures gracefully with automatic reconnection and user feedback.
+**CRITICAL:** All Server Components MUST be tested for proper data fetching and SSR compatibility. Client components require testing for hydration and progressive enhancement.
 
 ## Code Style & Conventions
 
-### Complex Component Architecture Standards
-**MANDATORY Interactive Component Structure:**
-```tsx
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { useWebSocket } from '../../hooks/use-websocket';
-import { useCanvasInteractions } from '../../hooks/use-canvas-interactions';
-import { cn } from '../../lib/utils';
+### Next.js App Router Standards (MANDATORY)
 
-interface NodeCanvasProps {
-  agentId: string;
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  onNodeUpdate: (nodeId: string, data: NodeData) => void;
-  onConnectionCreate: (source: string, target: string) => void;
-  readonly?: boolean;
+**1. Server Components by Default (Minimize 'use client')**
+```tsx
+// ✅ PREFERRED: Server Component for static/data-driven UI
+// No 'use client' needed
+export default async function AgentDashboard() {
+  // Direct database/API access on server
+  const agents = await getAgents(); // No fetch() needed
+  const runs = await getRecentRuns();
+  
+  return (
+    <div className="grid gap-6">
+      <AgentGrid agents={agents} />
+      <RunHistoryTable runs={runs} />
+    </div>
+  );
+}
+
+// ✅ Server Action for mutations
+async function createAgent(formData: FormData) {
+  'use server';
+  
+  const validatedData = CreateAgentSchema.parse({
+    name: formData.get('name'),
+    description: formData.get('description'),
+  });
+  
+  await db.agents.create(validatedData);
+  revalidatePath('/agents');
+}
+
+// ❌ AVOID: Client Component unless absolutely necessary
+'use client';
+export default function InteractiveCanvas() {
+  const [nodes, setNodes] = useState([]); // Only when state required
+  // ... client-side logic
+}
+```
+
+**2. TypeScript Strict Standards (MANDATORY)**
+```tsx
+// ✅ Comprehensive TypeScript interfaces
+interface AgentCardProps {
+  agent: {
+    id: string;
+    name: string;
+    description: string | null; // Explicit null handling
+    status: 'active' | 'inactive' | 'training' | 'error';
+    modelProvider: 'openai' | 'anthropic' | 'google' | 'local';
+    runCount: number;
+    createdAt: Date;
+    metadata?: Record<string, unknown>; // Strict unknown over any
+  };
+  onEdit?: (agentId: string) => void;
+  onDelete?: (agentId: string) => void;
   className?: string;
 }
 
-export const NodeCanvas: React.FC<NodeCanvasProps> = ({
-  agentId,
-  nodes,
-  edges,
-  onNodeUpdate,
-  onConnectionCreate,
-  readonly = false,
-  className
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
-  const [dragState, setDragState] = useState<DragState | null>(null);
-  
-  // WebSocket for real-time collaboration
-  const { send: sendUpdate, lastMessage } = useWebSocket(
-    `ws://localhost:8000/agents/${agentId}/canvas`,
-    {
-      onOpen: () => console.log('Canvas WebSocket connected'),
-      onError: (error) => console.error('Canvas WebSocket error:', error),
-      shouldReconnect: () => true,
-    }
-  );
+// ✅ Zod validation for Server Actions
+import { z } from 'zod';
 
-  // Canvas interaction handling
-  const {
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-    handleKeyDown,
-  } = useCanvasInteractions({
-    nodes,
-    edges,
-    selectedNodes,
-    onNodeUpdate,
-    onConnectionCreate,
-    canvasRef,
-    readonly,
-  });
-
-  // Keyboard accessibility for canvas
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.target !== canvasRef.current) return;
-      
-      switch (e.key) {
-        case 'Delete':
-          selectedNodes.forEach(nodeId => onNodeUpdate(nodeId, { deleted: true }));
-          break;
-        case 'Escape':
-          setSelectedNodes(new Set());
-          break;
-        case 'ArrowLeft':
-        case 'ArrowRight':
-        case 'ArrowUp':
-        case 'ArrowDown':
-          e.preventDefault();
-          handleKeyDown(e);
-          break;
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyPress);
-    return () => document.removeEventListener('keydown', handleKeyPress);
-  }, [selectedNodes, handleKeyDown, onNodeUpdate]);
-
-  return (
-    <div className={cn(
-      'relative flex-1 overflow-hidden border border-gray-200 rounded-lg',
-      'focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500',
-      className
-    )}>
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full cursor-crosshair focus:outline-none"
-        tabIndex={0}
-        role="img"
-        aria-label="Agent workflow canvas"
-        aria-describedby="canvas-instructions"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-      />
-      <div 
-        id="canvas-instructions" 
-        className="sr-only"
-      >
-        Use arrow keys to move nodes, Delete to remove selected nodes, 
-        Escape to clear selection. Click and drag to select multiple nodes.
-      </div>
-      
-      {/* Node properties panel overlay */}
-      {selectedNodes.size === 1 && (
-        <NodePropertiesPanel 
-          nodeId={Array.from(selectedNodes)[0]}
-          onUpdate={onNodeUpdate}
-          className="absolute top-4 right-4 w-80"
-        />
-      )}
-    </div>
-  );
-};
-```
-
-### Real-time Component Standards
-- **CRITICAL:** All streaming components MUST handle connection interruptions with automatic reconnection
-- **MANDATORY:** Use React.memo() for expensive renders with proper dependency arrays
-- **REQUIRED:** Implement proper cleanup for WebSocket/EventSource connections
-- **CRITICAL:** Debounce user interactions to prevent overwhelming the backend
-- **REQUIRED:** Use Web Workers for heavy computations (graph algorithms, large data processing)
-
-### Canvas & Interactive Component Requirements
-- **MANDATORY:** Support keyboard navigation for accessibility
-- **CRITICAL:** Implement proper ARIA labels for complex visualizations
-- **REQUIRED:** Use requestAnimationFrame for smooth animations
-- **CRITICAL:** Implement virtualization for large data sets (>1000 nodes/items)
-- **REQUIRED:** Provide alternative text descriptions for visual components
-
-### Performance Standards for Complex Components
-```tsx
-// Virtualization for large lists
-import { FixedSizeList as List } from 'react-window';
-
-// Memoization for expensive components
-const MemoizedTraceNode = React.memo(TraceNode, (prevProps, nextProps) => {
-  return prevProps.trace.id === nextProps.trace.id && 
-         prevProps.expanded === nextProps.expanded;
+const CreateAgentSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().optional(),
+  modelProvider: z.enum(['openai', 'anthropic', 'google', 'local']),
+  tools: z.array(z.string()).optional(),
 });
 
-// Web Worker for graph algorithms
-const useGraphLayout = (nodes: GraphNode[], edges: GraphEdge[]) => {
-  const [layout, setLayout] = useState<NodePosition[]>([]);
+type CreateAgentInput = z.infer<typeof CreateAgentSchema>;
+```
+
+**3. State Management Patterns**
+```tsx
+// ✅ URL searchParams for server-side state
+interface PageProps {
+  searchParams: { 
+    status?: string; 
+    page?: string; 
+    search?: string; 
+  };
+}
+
+export default function AgentsPage({ searchParams }: PageProps) {
+  const agents = await getAgents({
+    status: searchParams.status as AgentStatus,
+    page: Number(searchParams.page) || 1,
+    search: searchParams.search,
+  });
   
-  useEffect(() => {
-    const worker = new Worker('/workers/graph-layout.worker.js');
-    worker.postMessage({ nodes, edges });
-    worker.onmessage = (e) => setLayout(e.data.positions);
-    return () => worker.terminate();
-  }, [nodes, edges]);
+  return <AgentList agents={agents} />;
+}
+
+// ✅ Zustand for client-side global state
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+interface UIState {
+  sidebarOpen: boolean;
+  theme: 'light' | 'dark' | 'system';
+  toggleSidebar: () => void;
+  setTheme: (theme: UIState['theme']) => void;
+}
+
+export const useUIStore = create<UIState>()(
+  persist(
+    (set) => ({
+      sidebarOpen: true,
+      theme: 'system',
+      toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setTheme: (theme) => set({ theme }),
+    }),
+    { name: 'ui-settings' }
+  )
+);
+
+// ✅ TanStack Query for API data fetching (client-side)
+'use client';
+import { useQuery } from '@tanstack/react-query';
+
+export function useAgentRuns(agentId: string) {
+  return useQuery({
+    queryKey: ['agent-runs', agentId],
+    queryFn: () => fetch(`/api/agents/${agentId}/runs`).then(res => res.json()),
+    staleTime: 30_000, // 30 seconds
+    refetchOnWindowFocus: false,
+  });
+}
+```
+
+### Error Handling & Validation (CRITICAL)
+```tsx
+// ✅ Server Action with Zod validation and error handling
+async function updateAgent(agentId: string, formData: FormData) {
+  'use server';
   
-  return layout;
-};
+  try {
+    const validatedData = UpdateAgentSchema.parse({
+      name: formData.get('name'),
+      description: formData.get('description'),
+    });
+    
+    const agent = await db.agents.update({
+      where: { id: agentId },
+      data: validatedData,
+    });
+    
+    revalidatePath('/agents');
+    return { success: true, agent };
+    
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: 'Invalid form data',
+        fieldErrors: error.flatten().fieldErrors,
+      };
+    }
+    
+    console.error('Failed to update agent:', error);
+    return { success: false, error: 'Failed to update agent' };
+  }
+}
+
+// ✅ Error boundaries for complex components
+'use client';
+import { ErrorBoundary } from 'react-error-boundary';
+
+function ErrorFallback({ error, resetErrorBoundary }: any) {
+  return (
+    <div role="alert" className="p-4 border border-red-200 rounded-lg">
+      <h2 className="text-lg font-semibold text-red-800">Something went wrong:</h2>
+      <pre className="mt-2 text-sm text-red-600">{error.message}</pre>
+      <button 
+        onClick={resetErrorBoundary}
+        className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
+export function ProtectedComponent({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      {children}
+    </ErrorBoundary>
+  );
+}
+```
+
+### Performance & Streaming Patterns
+```tsx
+// ✅ Streaming with Suspense for progressive loading
+import { Suspense } from 'react';
+
+export default function DashboardPage() {
+  return (
+    <div className="space-y-6">
+      {/* Immediate render */}
+      <DashboardHeader />
+      
+      {/* Progressive loading with fallbacks */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Suspense fallback={<AgentGridSkeleton />}>
+          <AgentGrid />
+        </Suspense>
+        
+        <Suspense fallback={<MetricsDashboardSkeleton />}>
+          <MetricsDashboard />
+        </Suspense>
+      </div>
+      
+      {/* Heavy component loads last */}
+      <Suspense fallback={<RunHistorySkeleton />}>
+        <RunHistoryTable />
+      </Suspense>
+    </div>
+  );
+}
+
+// ✅ Parallel data fetching (not waterfall)
+export default async function AgentDetailPage({ params }: { params: { id: string } }) {
+  // Initiate all requests in parallel
+  const [agent, runs, metrics] = await Promise.all([
+    getAgent(params.id),
+    getAgentRuns(params.id),
+    getAgentMetrics(params.id),
+  ]);
+  
+  return (
+    <div>
+      <AgentHeader agent={agent} />
+      <RunsTable runs={runs} />
+      <MetricsChart data={metrics} />
+    </div>
+  );
+}
 ```
 
 ## Testing & Validation Protocol
 
-### Complex Component Testing Framework
-**Testing Stack:** Jest + React Testing Library + Canvas Testing Utilities + WebSocket Mocks
-**Coverage Requirement:** ≥95% for foundational components, ≥85% for complex interactive components
+### Next.js Testing Framework
+**Testing Stack:** Jest + React Testing Library + Playwright (E2E) + MSW (API mocking)
+**Coverage Requirements:** 
+- Server Components: ≥90% (data fetching, SSR)
+- Client Components: ≥95% (interactions, state)
+- Server Actions: ≥95% (validation, mutations)
 
-### Required Test Categories for Interactive Components
+### Server Component Testing
 ```tsx
-// Example: node-canvas.test.tsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { NodeCanvas } from './node-canvas';
-import { MockWebSocketServer } from '../../test-utils/mock-websocket';
+// server-component.test.tsx
+import { render, screen } from '@testing-library/react';
+import AgentDashboard from './agent-dashboard';
 
-describe('NodeCanvas', () => {
-  let mockWsServer: MockWebSocketServer;
+// Mock Next.js modules
+jest.mock('next/navigation', () => ({
+  redirect: jest.fn(),
+}));
 
-  beforeEach(() => {
-    mockWsServer = new MockWebSocketServer('ws://localhost:8000/agents/test/canvas');
+describe('AgentDashboard (Server Component)', () => {
+  it('renders agent data from server', async () => {
+    // Mock the server-side data fetching
+    const mockAgents = [
+      { id: '1', name: 'Test Agent', status: 'active' as const },
+    ];
+    
+    jest.spyOn(require('../lib/agents'), 'getAgents').mockResolvedValue(mockAgents);
+    
+    render(await AgentDashboard());
+    
+    expect(screen.getByText('Test Agent')).toBeInTheDocument();
+    expect(screen.getByText('active')).toBeInTheDocument();
   });
 
-  afterEach(() => {
-    mockWsServer.close();
-  });
-
-  // 1. Canvas Rendering Tests
-  it('renders canvas with proper ARIA labels', () => {
-    render(<NodeCanvas agentId="test" nodes={[]} edges={[]} />);
+  it('handles empty agent list gracefully', async () => {
+    jest.spyOn(require('../lib/agents'), 'getAgents').mockResolvedValue([]);
     
-    const canvas = screen.getByRole('img', { name: /agent workflow canvas/i });
-    expect(canvas).toBeInTheDocument();
-    expect(canvas).toHaveAttribute('tabIndex', '0');
-  });
-
-  // 2. Keyboard Navigation Tests
-  it('supports keyboard node movement', async () => {
-    const mockOnNodeUpdate = jest.fn();
-    const nodes = [{ id: 'node1', x: 100, y: 100, type: 'start' }];
+    render(await AgentDashboard());
     
-    render(
-      <NodeCanvas 
-        agentId="test" 
-        nodes={nodes} 
-        edges={[]} 
-        onNodeUpdate={mockOnNodeUpdate}
-      />
-    );
-    
-    const canvas = screen.getByRole('img');
-    canvas.focus();
-    
-    // Select node first (mock click)
-    fireEvent.mouseDown(canvas, { clientX: 100, clientY: 100 });
-    fireEvent.mouseUp(canvas);
-    
-    // Move with keyboard
-    fireEvent.keyDown(canvas, { key: 'ArrowRight' });
-    
-    await waitFor(() => {
-      expect(mockOnNodeUpdate).toHaveBeenCalledWith(
-        'node1',
-        expect.objectContaining({ x: 105 })
-      );
-    });
-  });
-
-  // 3. WebSocket Integration Tests
-  it('handles real-time collaboration updates', async () => {
-    const mockOnNodeUpdate = jest.fn();
-    
-    render(<NodeCanvas agentId="test" nodes={[]} edges={[]} onNodeUpdate={mockOnNodeUpdate} />);
-    
-    // Simulate receiving update from another user
-    mockWsServer.send({
-      type: 'node_update',
-      nodeId: 'node1',
-      data: { x: 200, y: 150 }
-    });
-    
-    await waitFor(() => {
-      expect(mockOnNodeUpdate).toHaveBeenCalledWith('node1', { x: 200, y: 150 });
-    });
-  });
-
-  // 4. Performance Tests
-  it('handles large graphs without performance degradation', async () => {
-    const startTime = performance.now();
-    const largeNodes = Array.from({ length: 1000 }, (_, i) => ({
-      id: `node${i}`,
-      x: Math.random() * 1000,
-      y: Math.random() * 1000,
-      type: 'process'
-    }));
-    
-    render(<NodeCanvas agentId="test" nodes={largeNodes} edges={[]} />);
-    
-    const renderTime = performance.now() - startTime;
-    expect(renderTime).toBeLessThan(100); // Should render in under 100ms
-  });
-
-  // 5. Error Handling Tests
-  it('gracefully handles WebSocket disconnection', async () => {
-    const { container } = render(<NodeCanvas agentId="test" nodes={[]} edges={[]} />);
-    
-    // Simulate connection loss
-    mockWsServer.close();
-    
-    // Should show reconnection indicator
-    await waitFor(() => {
-      expect(container.querySelector('[data-testid="reconnecting-indicator"]')).toBeInTheDocument();
-    });
+    expect(screen.getByText(/no agents found/i)).toBeInTheDocument();
   });
 });
+```
 
-// Streaming Terminal Tests
+### Server Action Testing
+```tsx
+// server-action.test.ts
+import { createAgent } from './agent-actions';
+
+describe('createAgent Server Action', () => {
+  it('creates agent with valid data', async () => {
+    const formData = new FormData();
+    formData.set('name', 'Test Agent');
+    formData.set('description', 'Test description');
+    formData.set('modelProvider', 'openai');
+    
+    const result = await createAgent(formData);
+    
+    expect(result.success).toBe(true);
+    expect(result.agent?.name).toBe('Test Agent');
+  });
+
+  it('validates form data with Zod', async () => {
+    const formData = new FormData();
+    formData.set('name', ''); // Invalid: empty name
+    
+    const result = await createAgent(formData);
+    
+    expect(result.success).toBe(false);
+    expect(result.fieldErrors?.name).toBeDefined();
+  });
+});
+```
+
+### Client Component Testing with Real-time Features
+```tsx
+// streaming-terminal.test.tsx
+import { render, screen, waitFor } from '@testing-library/react';
+import { StreamingTerminal } from './streaming-terminal';
+
 describe('StreamingTerminal', () => {
-  it('handles EventSource streams with proper cleanup', async () => {
-    const mockEventSource = jest.fn().mockImplementation(() => ({
+  it('handles EventSource streaming', async () => {
+    const mockEventSource = {
       addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
       close: jest.fn(),
-    }));
+    };
     
-    global.EventSource = mockEventSource;
+    global.EventSource = jest.fn(() => mockEventSource) as any;
     
-    const { unmount } = render(
-      <StreamingTerminal agentId="test" runId="run123" />
-    );
+    render(<StreamingTerminal agentId="test" runId="run123" />);
     
-    expect(mockEventSource).toHaveBeenCalledWith('/api/runs/run123/stream');
+    expect(global.EventSource).toHaveBeenCalledWith('/api/runs/run123/stream');
+    expect(mockEventSource.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+  });
+
+  it('cleans up EventSource on unmount', () => {
+    const mockEventSource = {
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      close: jest.fn(),
+    };
+    
+    global.EventSource = jest.fn(() => mockEventSource) as any;
+    
+    const { unmount } = render(<StreamingTerminal agentId="test" runId="run123" />);
     
     unmount();
     
-    // Should cleanup EventSource
-    expect(mockEventSource().close).toHaveBeenCalled();
+    expect(mockEventSource.close).toHaveBeenCalled();
   });
 });
 ```
 
-### Validation Commands (MUST Execute After Changes)
+### Validation Commands (MANDATORY EXECUTION)
 ```bash
-# Type checking with complex component validation
+# TypeScript strict type checking
 npm run type-check
 
-# Comprehensive linting including canvas components
+# Biome linting (Rust-based, fast)
 npm run lint
 
-# Full test suite including interaction tests
-npm run test -- --coverage --testPathPattern="ui|interactive"
+# Server Component tests
+npm run test:server
 
-# Canvas-specific accessibility testing
-npm run test:canvas-a11y
+# Client Component and interaction tests  
+npm run test:client
 
-# WebSocket/streaming integration tests
-npm run test:real-time
+# Server Action validation and mutation tests
+npm run test:actions
 
-# Performance tests for complex components
+# End-to-end testing with Playwright
+npm run test:e2e
+
+# Accessibility testing with axe-core
+npm run test:a11y
+
+# Performance testing for streaming/real-time features
 npm run test:performance
 
-# Visual regression tests
-npm run test:visual -- --updateSnapshot
+# Bundle analysis for RSC optimization
+npm run analyze
 ```
 
-**CRITICAL VALIDATION RULE:** Agents MUST execute ALL validation commands and ensure they pass before completing any UI component task. Special attention required for WebSocket cleanup, canvas accessibility, and performance thresholds.
+**CRITICAL:** All tests MUST pass before completing tasks. Pay special attention to Server Component SSR compatibility and Server Action validation.
 
 ## Pull Request (PR) Instructions
 
 ### PR Title Format (MANDATORY)
 ```
-[UI] <Component Type>: <Short description>
+[UI-RSC] <Component Type>: <Description>
+[UI-Client] <Component Type>: <Description> 
+[Actions] <Feature>: <Description>
 
 Examples:
-[UI] Interactive: Add node canvas with real-time collaboration
-[UI] Streaming: Implement agent execution terminal with EventSource
-[UI] Dashboard: Add memory browser with semantic search
-[UI] Foundation: Update button component with loading states
+[UI-RSC] Dashboard: Add agent grid with server-side filtering
+[UI-Client] Canvas: Implement real-time node collaboration
+[Actions] Agents: Add Zod validation for agent creation
 ```
 
-### Required PR Body Sections
+### Required PR Sections
 ```markdown
 ## Description:
-Brief description of UI component changes and interaction/performance impact.
+Brief description focusing on Server/Client component distinction and data flow.
 
-## Component Updates:
-- [ ] Component functionality implemented with proper TypeScript interfaces
-- [ ] Real-time features tested with WebSocket/EventSource mocking
-- [ ] Canvas/interactive components support keyboard navigation
-- [ ] Performance optimizations implemented (virtualization, memoization)
-- [ ] Error boundaries and connection failure handling added
+## Architecture Changes:
+- [ ] Server Component implementation with proper data fetching
+- [ ] Client Component with justified 'use client' usage
+- [ ] Server Actions with Zod validation
+- [ ] TypeScript interfaces with strict typing
+- [ ] Error boundaries for complex interactions
 
-## Testing Done:
-- [ ] Unit tests with ≥85% coverage for complex components (≥95% for foundational)
-- [ ] Interaction tests for keyboard navigation and accessibility
-- [ ] WebSocket/EventSource connection and cleanup testing
-- [ ] Performance testing with large data sets (>1000 items)
-- [ ] Visual regression tests for complex visualizations
-- [ ] Cross-browser testing for canvas and streaming features
+## Testing Completed:
+- [ ] Server Component SSR testing
+- [ ] Client Component interaction testing  
+- [ ] Server Action validation testing
+- [ ] Real-time feature connection/cleanup testing
+- [ ] E2E testing with Playwright
+- [ ] Accessibility testing with axe-core
+
+## Performance Validation:
+- [ ] Bundle analysis shows appropriate RSC/Client split
+- [ ] Streaming/Suspense boundaries tested
+- [ ] WebSocket connections properly managed
+- [ ] No hydration mismatches
+- [ ] Progressive enhancement verified
 
 ## Accessibility Checklist:
-- [ ] Keyboard navigation functional for all interactive elements
-- [ ] ARIA labels and descriptions for complex visualizations
-- [ ] Screen reader compatibility with dynamic content announcements
-- [ ] High contrast support and focus indicators
-- [ ] Alternative text descriptions for visual-only information
+- [ ] Semantic HTML with proper ARIA labels
+- [ ] Keyboard navigation for all interactive elements
+- [ ] Screen reader compatibility with dynamic content
+- [ ] Color contrast meets WCAG 2.1 AA standards
+- [ ] Form validation errors properly announced
 
-## Performance Checklist:
-- [ ] Components handle >1000 data items without lag
-- [ ] Canvas rendering uses requestAnimationFrame
-- [ ] WebSocket reconnection logic doesn't create memory leaks
-- [ ] Large components use virtualization or pagination
-- [ ] Expensive computations moved to Web Workers
-
-## Screenshots/Videos:
-[Include recordings of complex interactions, canvas operations, streaming responses]
+## Screenshots/Recordings:
+[Include evidence of Server/Client rendering, streaming behavior, error states]
 ```
 
 ## Security & Non-Goals
 
-### Security Guidelines for Interactive Components
-- **CRITICAL:** Sanitize all data received via WebSocket/EventSource connections
-- **MANDATORY:** Validate graph data structures to prevent infinite loops or crashes
-- **REQUIRED:** Implement proper authentication for real-time connections
-- **CRITICAL:** Rate-limit user interactions to prevent backend overload
-- **REQUIRED:** Sanitize canvas rendering data to prevent XSS via SVG/HTML injection
+### Security Standards
+- **CRITICAL:** Use Server Actions exclusively for mutations (never client-side API calls)
+- **MANDATORY:** Validate all inputs with Zod schemas on the server
+- **REQUIRED:** Use React's taint APIs to prevent sensitive data client exposure
+- **CRITICAL:** Implement proper CSRF protection for Server Actions
+- **REQUIRED:** Sanitize all real-time data from WebSocket/EventSource connections
 
-### Real-time Connection Security
+### Next.js Security Patterns
 ```tsx
-// Secure WebSocket connection with authentication
-const useSecureWebSocket = (url: string, token: string) => {
-  return useWebSocket(`${url}?token=${encodeURIComponent(token)}`, {
-    onOpen: () => console.log('Authenticated WebSocket connected'),
-    onError: (error) => console.error('WebSocket authentication failed:', error),
-    shouldReconnect: (closeEvent) => closeEvent.code !== 4001, // Don't reconnect on auth failure
+// ✅ Secure Server Action with validation
+async function updateAgentSettings(formData: FormData) {
+  'use server';
+  
+  // Authentication check
+  const session = await getServerSession();
+  if (!session?.user) {
+    throw new Error('Unauthorized');
+  }
+  
+  // Input validation
+  const data = UpdateSettingsSchema.parse({
+    name: formData.get('name'),
+    // ... other fields
   });
-};
+  
+  // Authorization check
+  const agent = await getAgent(data.agentId);
+  if (agent.userId !== session.user.id) {
+    throw new Error('Forbidden');
+  }
+  
+  // Safe operation
+  return await updateAgent(data);
+}
 ```
 
-### Non-Goals (DO NOT Implement)
-- **FORBIDDEN:** Direct canvas manipulation without proper event handling
-- **FORBIDDEN:** WebSocket connections without proper cleanup and error handling  
-- **FORBIDDEN:** Complex visualizations without keyboard accessibility
-- **FORBIDDEN:** Real-time features without offline graceful degradation
-- **FORBIDDEN:** Canvas components without ARIA labels and descriptions
-- **FORBIDDEN:** Streaming components without connection failure recovery
-- **FORBIDDEN:** Performance-heavy operations on the main thread
-- **FORBIDDEN:** Complex state management without proper TypeScript typing
-- **FORBIDDEN:** Interactive components without comprehensive interaction testing
+### Non-Goals (FORBIDDEN)
+- **FORBIDDEN:** Using 'use client' without clear justification for interactivity
+- **FORBIDDEN:** Client-side mutations without Server Actions
+- **FORBIDDEN:** useEffect for data fetching in Server Components
+- **FORBIDDEN:** Global state (Redux) for server-side state
+- **FORBIDDEN:** Custom CSS without Tailwind utility classes
+- **FORBIDDEN:** Components without proper TypeScript strict typing
+- **FORBIDDEN:** Real-time features without connection cleanup
+- **FORBIDDEN:** Form submissions without Zod validation
+- **FORBIDDEN:** API routes when Server Actions suffice
+- **FORBIDDEN:** Direct database queries in Client Components
 
-**Component Scope:** This directory contains both foundational UI primitives and sophisticated interactive components. Complex business logic belongs in custom hooks or services, never embedded directly in UI components. All components must support the three-column layout architecture and progressive disclosure patterns.
+**Architecture Principle:** Server-first with selective client hydration. Every 'use client' directive must be justified by genuine interactivity needs. All data mutations flow through Server Actions with comprehensive validation.
