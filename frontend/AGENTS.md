@@ -258,3 +258,7 @@ test('should handle agent update', async () => {
 *   **NEVER** ignore accessibility requirements
 *   **NEVER** hardcode API URLs or sensitive configuration
 *   **NEVER** use Pages Router (App Router only)
+
+## 13. Programmatic Checks
+*   **MANDATORY:** Run `npm run lint` before committing changes
+*   **MANDATORY:** Run `npm run type-check` to verify TypeScript types
