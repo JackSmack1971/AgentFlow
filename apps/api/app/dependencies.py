@@ -1,8 +1,8 @@
-from typing import List
+from typing import Awaitable, Callable, List  # isort:skip  # noqa: UP035
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .exceptions import TokenError
 from .services import auth as auth_service
@@ -12,7 +12,7 @@ security = HTTPBearer()
 
 class User(BaseModel):
     sub: str
-    roles: List[str] = []
+    roles: List[str] = Field(default_factory=list)  # noqa: UP006
 
 
 async def get_current_user(
@@ -25,11 +25,13 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(exc),
             headers={"WWW-Authenticate": "Bearer"},
-        )
-    return User(sub=sub, roles=[])
+        ) from exc
+    return User(sub=sub)
 
 
-def require_roles(required: List[str]):
+def require_roles(
+    required: List[str],  # noqa: UP006
+) -> Callable[[User], Awaitable[User]]:
     async def role_checker(user: User = Depends(get_current_user)) -> User:
         if not set(required).intersection(user.roles):
             raise HTTPException(
