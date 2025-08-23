@@ -19,6 +19,7 @@ dependencies = [
     "mcp[cli]==1.13.0",
     "mem0ai==0.1.116",
     "opentelemetry-api>=1.20",
+    "passlib[bcrypt]>=1.7.4",
     "psycopg[binary]==3.2.9",
     "pydantic==2.11.7",
     "pydantic-ai-slim[openai]==0.7.4",
