@@ -1,10 +1,9 @@
 """Memory API endpoints."""
+
 from __future__ import annotations
 
-from typing import List, Optional
-
 import asyncio
-from typing import AsyncGenerator
+from typing import AsyncGenerator, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
@@ -16,7 +15,13 @@ from ..memory.exceptions import (
     MemoryStreamError,
     MemoryStreamTimeoutError,
 )
-from ..memory.models import MemoryEvent, MemoryItem, MemoryItemCreate, MemoryItemUpdate, MemoryScope
+from ..memory.models import (
+    MemoryEvent,
+    MemoryItem,
+    MemoryItemCreate,
+    MemoryItemUpdate,
+    MemoryScope,
+)
 from ..services.memory import memory_service
 
 router = APIRouter()
@@ -44,7 +49,9 @@ async def list_memory_items(
     tags: Optional[List[str]] = Query(None),
     user: User = Depends(require_roles(["user"])),
 ) -> List[MemoryItem]:
-    return await memory_service.list_items(offset=offset, limit=limit, scope=scope, tags=tags)
+    return await memory_service.list_items(
+        offset=offset, limit=limit, scope=scope, tags=tags
+    )
 
 
 @router.get("/items/{item_id}", response_model=MemoryItem, summary="Get memory item")
@@ -70,7 +77,11 @@ async def update_memory_item(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete memory item")
+@router.delete(
+    "/items/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete memory item",
+)
 async def delete_memory_item(
     item_id: str,
     user: User = Depends(require_roles(["user"])),
@@ -82,7 +93,9 @@ async def delete_memory_item(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/items/import", response_model=List[MemoryItem], summary="Bulk import memory items")
+@router.post(
+    "/items/import", response_model=List[MemoryItem], summary="Bulk import memory items"
+)
 async def import_memory_items(
     items: List[MemoryItemCreate],
     user: User = Depends(require_roles(["user"])),
@@ -90,7 +103,9 @@ async def import_memory_items(
     return await memory_service.bulk_import(items)
 
 
-@router.post("/items/export", response_model=List[MemoryItem], summary="Export memory items")
+@router.post(
+    "/items/export", response_model=List[MemoryItem], summary="Export memory items"
+)
 async def export_memory_items(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1),
@@ -98,7 +113,9 @@ async def export_memory_items(
     tags: Optional[List[str]] = Query(None),
     user: User = Depends(require_roles(["user"])),
 ) -> List[MemoryItem]:
-    return await memory_service.bulk_export(offset=offset, limit=limit, scope=scope, tags=tags)
+    return await memory_service.bulk_export(
+        offset=offset, limit=limit, scope=scope, tags=tags
+    )
 
 
 @router.get("/search", response_model=List[MemoryItem], summary="Search memory items")
@@ -110,7 +127,9 @@ async def search_memory_items(
     tags: Optional[List[str]] = Query(None),
     user: User = Depends(require_roles(["user"])),
 ) -> List[MemoryItem]:
-    return await memory_service.search_items(q, offset=offset, limit=limit, scope=scope, tags=tags)
+    return await memory_service.search_items(
+        q, offset=offset, limit=limit, scope=scope, tags=tags
+    )
 
 
 @router.get("/stream", summary="Stream memory change events")

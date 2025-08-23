@@ -19,11 +19,8 @@ from apps.api.app import config  # noqa: E402
 from apps.api.app.core.cache import Cache, get_cache  # noqa: E402
 from apps.api.app.exceptions import CacheError  # noqa: E402
 from apps.api.app.main import app  # noqa: E402
-from apps.api.app.models.cache import (  # noqa: E402
-    CacheEntry,
-    CachePostResponse,
-)
 from apps.api.app.middleware.audit import MiddlewareError  # noqa: E402
+from apps.api.app.models.cache import CacheEntry, CachePostResponse  # noqa: E402
 
 config.get_settings.cache_clear()
 

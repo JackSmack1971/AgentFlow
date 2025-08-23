@@ -1,5 +1,6 @@
 """Custom exceptions for memory module."""
 
+
 class MemoryError(Exception):
     """Base exception for memory operations."""
 

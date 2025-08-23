@@ -1,8 +1,11 @@
 """Tests for error taxonomy and codes."""
 
 from apps.api.app.errors import DomainError, ErrorCode, ProviderError
-from apps.api.app.exceptions import (HealthCheckError, InvalidCredentialsError,
-                                     R2RServiceError)
+from apps.api.app.exceptions import (
+    HealthCheckError,
+    InvalidCredentialsError,
+    R2RServiceError,
+)
 
 
 def test_r2r_service_error_taxonomy() -> None:

@@ -1,4 +1,5 @@
 from typing import List
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -27,9 +28,13 @@ async def get_current_user(
         )
     return User(sub=sub, roles=[])
 
+
 def require_roles(required: List[str]):
     async def role_checker(user: User = Depends(get_current_user)) -> User:
         if not set(required).intersection(user.roles):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+            )
         return user
+
     return role_checker

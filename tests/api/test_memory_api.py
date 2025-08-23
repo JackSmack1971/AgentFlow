@@ -2,9 +2,9 @@ import os
 import pathlib
 import sys
 import types
-import pytest
 
-from httpx import AsyncClient, ASGITransport
+import pytest
+from httpx import ASGITransport, AsyncClient
 
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 
@@ -42,8 +42,8 @@ models_mod.ModelSettings = DummyModelSettings
 sys.modules["pydantic_ai"] = mock_ai
 sys.modules["pydantic_ai.models"] = models_mod
 
-from apps.api.app.main import app
 from apps.api.app.dependencies import User, get_current_user
+from apps.api.app.main import app
 from apps.api.app.routers import memory as memory_router
 
 
@@ -91,7 +91,9 @@ async def test_update_and_delete_item() -> None:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.post("/memory/items", json={"text": "temp"})
         item_id = resp.json()["id"]
-        resp = await ac.put(f"/memory/items/{item_id}", json={"text": "updated", "tags": ["x"]})
+        resp = await ac.put(
+            f"/memory/items/{item_id}", json={"text": "updated", "tags": ["x"]}
+        )
         assert resp.json()["text"] == "updated"
         resp = await ac.delete(f"/memory/items/{item_id}")
         assert resp.status_code == 204

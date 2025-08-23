@@ -25,4 +25,3 @@ async def test_stream_emits_events() -> None:
         assert event.item.text == "hello"
     finally:
         memory_service.unsubscribe(queue)
-

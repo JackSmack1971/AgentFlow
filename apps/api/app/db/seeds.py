@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import secrets
+
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,7 +38,9 @@ async def seed_initial_data(session: AsyncSession) -> None:
         await session.flush()
 
         admin = await session.scalar(select(Role).where(Role.name == "admin"))
-        session.add(Membership(user_id=user.id, organization_id=org.id, role_id=admin.id))
+        session.add(
+            Membership(user_id=user.id, organization_id=org.id, role_id=admin.id)
+        )
 
         raw_key = os.getenv("SEED_API_KEY") or secrets.token_hex(16)
         session.add(APIKey(user_id=user.id, hashed_key=encrypt(raw_key)))

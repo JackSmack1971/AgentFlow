@@ -4,9 +4,17 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from loguru import logger
 
 from ..exceptions import InvalidCredentialsError, OTPError, TokenError
-from ..models.auth import (LoginRequest, LogoutResponse, RefreshRequest,
-                           RegisterResponse, ResetRequest, ResetResponse,
-                           TokenResponse, UserCreate, UserInfo)
+from ..models.auth import (
+    LoginRequest,
+    LogoutResponse,
+    RefreshRequest,
+    RegisterResponse,
+    ResetRequest,
+    ResetResponse,
+    TokenResponse,
+    UserCreate,
+    UserInfo,
+)
 from ..rate_limiter import limiter
 from ..services import auth as auth_service
 

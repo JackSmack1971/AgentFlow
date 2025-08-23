@@ -7,8 +7,8 @@ from typing import Any, Dict, List, Optional
 
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
-from ..models.schemas import MemoryItem
 from ..memory.exceptions import MemoryNotFoundError, MemoryServiceError
+from ..models.schemas import MemoryItem
 
 try:  # pragma: no cover - optional dependency
     from mem0 import Memory, MemoryClient  # type: ignore
@@ -137,9 +137,7 @@ class ScopedMemoryService:
             raise ValueError("query must not be empty")
         try:
             if self.backend:
-                res = await _run_with_retry(
-                    self.backend.search, query, limit=limit
-                )
+                res = await _run_with_retry(self.backend.search, query, limit=limit)
                 ids = [r.get("id") for r in res]
                 results = [self._items[i] for i in ids if i in self._items]
             else:

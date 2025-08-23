@@ -1,14 +1,7 @@
 import pytest
 from sqlalchemy import select
 
-from apps.api.app.db.models import (
-    APIKey,
-    Agent,
-    Membership,
-    Organization,
-    Role,
-    User,
-)
+from apps.api.app.db.models import Agent, APIKey, Membership, Organization, Role, User
 
 
 @pytest.mark.asyncio
