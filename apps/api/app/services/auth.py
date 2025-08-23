@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import config
 from ..db.models import User
 from ..exceptions import InvalidCredentialsError, OTPError, TokenError
-from ..utils.password import hash_password, verify_password
+from ..utils.password import hash_password_async, verify_password_async
 from . import token_store
 
 is_refresh_token_blacklisted = token_store.is_refresh_token_blacklisted
@@ -60,15 +60,12 @@ class AuthService:
     async def register_user(self, email: str, password: str) -> str:
         if not email or not password:
             raise InvalidCredentialsError("Email and password required")
-
         if password.lower() in PASSWORD_POLICY_BANNED:
             raise InvalidCredentialsError("Password is not allowed")
-
         if len(password) < PASSWORD_POLICY_MIN_LENGTH:
             raise InvalidCredentialsError(
                 f"Password must be at least {PASSWORD_POLICY_MIN_LENGTH} characters long"
             )
-
         missing = [
             name
             for name, check in PASSWORD_POLICY_REQUIRED_CLASSES.items()
@@ -76,11 +73,9 @@ class AuthService:
         ]
         if missing:
             raise InvalidCredentialsError("Password must contain " + ", ".join(missing))
-
         secret = generate_totp_secret()
-        user = User(
-            email=email, otp_secret=secret, hashed_password=hash_password(password)
-        )
+        hashed = await hash_password_async(password)
+        user = User(email=email, otp_secret=secret, hashed_password=hashed)
         self.db.add(user)
         try:
             await asyncio.wait_for(self.db.commit(), timeout=5)
@@ -94,7 +89,9 @@ class AuthService:
 
     async def authenticate_user(self, email: str, password: str, otp_code: str) -> bool:
         user = await self._get_user(email)
-        if not user or not verify_password(password, user.hashed_password):
+        if not user or not await verify_password_async(
+            password, user.hashed_password
+        ):
             raise InvalidCredentialsError("Invalid email or password")
         if not pyotp.TOTP(user.otp_secret).verify(otp_code):
             raise OTPError("Invalid one-time password")
