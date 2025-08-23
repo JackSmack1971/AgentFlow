@@ -1,4 +1,5 @@
-FROM python:3.10-slim
+ARG PYTHON_VERSION=3.10
+FROM python:${PYTHON_VERSION}-slim
 
 ENV UV_INSTALL_DIR=/usr/local/bin
 
@@ -10,6 +11,10 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:/root/.cargo/bin:${PATH}"
 
 WORKDIR /app
+
+# Ensure container Python version matches repository configuration
+COPY .python-version .python-version
+RUN test "$PYTHON_VERSION" = "$(cat .python-version)"
 
 # Copy dependency files first for caching
 COPY pyproject.toml uv.lock ./
