@@ -1,11 +1,14 @@
 version: "3.8"
 services:
   api:
-    build: .
-    command: uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    command: uv run uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000
     environment:
-      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/agentflow
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -14,10 +17,13 @@ services:
     ports: ["8000:8000"]
 
   mcp:
-    build: .
-    command: python apps/mcp/server.py
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    command: uv run python apps/mcp/server.py
     environment:
-      MCP_TRANSPORT: stdio
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-stdio}
     depends_on:
       - api
 
