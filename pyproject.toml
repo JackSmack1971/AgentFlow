@@ -52,8 +52,14 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build]
+exclude = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["apps", "packages"]
 
 [tool.black]
 line-length = 88
