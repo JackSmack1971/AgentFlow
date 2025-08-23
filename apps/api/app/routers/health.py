@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncio
 
 import psycopg
@@ -8,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
 
 from ..config import Settings, get_settings
+from ..database import get_pool_status
 from ..exceptions import HealthCheckError
 from ..models.health import HealthStatus
 
@@ -57,3 +56,25 @@ async def readiness(
             detail=f"{exc.service} unavailable",
         ) from exc
     return HealthStatus(status="ready")
+
+
+@router.get(
+    "/health/db",
+    response_model=dict[str, int],
+    summary="Database pool status",
+    description="Return current database connection pool metrics.",
+    tags=["health"],
+)
+async def database_health() -> dict[str, int]:
+    """Retrieve database connection pool status metrics."""
+    try:
+        try:
+            return get_pool_status()
+        except Exception as exc:  # noqa: BLE001
+            raise HealthCheckError("database", str(exc)) from exc
+    except HealthCheckError as exc:
+        logger.error({"service": exc.service, "error": str(exc)})
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="database pool status unavailable",
+        ) from exc
