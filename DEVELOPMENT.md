@@ -8,6 +8,7 @@
 # 1. Clone and setup
 git clone <repository>
 cd agentflow
+# Ensure your Python interpreter matches the version in `.python-version`
 ./scripts/setup.sh
 
 # 2. Configure environment

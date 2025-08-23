@@ -118,7 +118,7 @@ agentflow/
 
 ### Prerequisites
 
-- **Python 3.10** (see `.python-version` for the exact version) with `uv` package manager
+- **Python 3.10.17** (pinned in `.python-version` for consistency) with `uv` package manager
 - **Node.js 20+** with npm
 - **Docker & Docker Compose** for local services
 - **Git** for version control
