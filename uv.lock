@@ -13,7 +13,6 @@ name = "agentflow"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "aiosqlite" },
     { name = "alembic" },
     { name = "cryptography" },
     { name = "email-validator" },
@@ -45,6 +44,24 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "aiosqlite" },
+    { name = "bandit" },
+    { name = "black" },
+    { name = "fakeredis" },
+    { name = "flake8" },
+    { name = "hypothesis" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "respx" },
+    { name = "ruff" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "aiosqlite" },
     { name = "bandit" },
     { name = "black" },
     { name = "fakeredis" },
@@ -61,7 +78,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiosqlite", specifier = "==0.21.0" },
+    { name = "aiosqlite", marker = "extra == 'dev'", specifier = "==0.21.0" },
     { name = "alembic", specifier = "==1.16.4" },
     { name = "bandit", marker = "extra == 'dev'" },
     { name = "black", marker = "extra == 'dev'" },
@@ -103,6 +120,24 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = "==0.35.0" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+default = []
+dev = [
+    { name = "aiosqlite", specifier = "==0.21.0" },
+    { name = "bandit" },
+    { name = "black" },
+    { name = "fakeredis", specifier = "==2.31.0" },
+    { name = "flake8" },
+    { name = "hypothesis" },
+    { name = "mypy", specifier = ">=1.5" },
+    { name = "pre-commit", specifier = ">=3.0" },
+    { name = "pytest", specifier = "==8.4.1" },
+    { name = "pytest-asyncio", specifier = "==1.1.0" },
+    { name = "pytest-cov" },
+    { name = "respx", specifier = "==0.22.0" },
+    { name = "ruff", specifier = ">=0.1.0" },
+]
 
 [[package]]
 name = "aiofiles"
