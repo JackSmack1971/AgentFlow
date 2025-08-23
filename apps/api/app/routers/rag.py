@@ -4,7 +4,7 @@ from ..dependencies import User, require_roles
 from ..exceptions import R2RServiceError
 from ..models.rag import DocumentUploadResponse, RAGSearchResponse
 from ..models.schemas import RAGQuery
-from ..services.rag import rag, rag_service
+from ..services.rag import MAX_FILE_SIZE, rag, rag_service
 
 router = APIRouter()
 
@@ -36,12 +36,30 @@ async def upload_document(
     file: UploadFile = File(...),
     user: User = Depends(require_roles(["user"])),
 ) -> DocumentUploadResponse:
-    content = await file.read()
+    file_size = getattr(file, "size", None)
+    if file_size is not None and file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File exceeds maximum size of {MAX_FILE_SIZE} bytes",
+        )
+
+    content = bytearray()
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        content.extend(chunk)
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File exceeds maximum size of {MAX_FILE_SIZE} bytes",
+            )
+
     filename = file.filename or "upload"
     content_type = file.content_type or "application/octet-stream"
     try:
         result = await rag_service.upload_document(
-            content, filename=filename, content_type=content_type
+            bytes(content), filename=filename, content_type=content_type
         )
         return DocumentUploadResponse.model_validate(result)
     except ValueError as exc:

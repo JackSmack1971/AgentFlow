@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -5,6 +7,7 @@ from apps.api.app.exceptions import R2RServiceError
 from apps.api.app.main import app
 from apps.api.app.models.rag import DocumentUploadResponse, RAGSearchResponse
 from apps.api.app.routers import rag as rag_router
+from apps.api.app.services.rag import MAX_FILE_SIZE
 
 
 @pytest.mark.asyncio
@@ -70,25 +73,36 @@ async def test_run_rag_failure(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
-async def test_upload_document_success(monkeypatch) -> None:
-    async def fake_upload(
-        content: bytes,
-        *,
-        filename: str,
-        content_type: str,
-    ) -> dict:
-        return {"ok": True}
-
-    monkeypatch.setattr(rag_router.rag_service, "upload_document", fake_upload)
+async def test_upload_document_valid_file_success(monkeypatch) -> None:
+    upload_mock = AsyncMock(return_value={"ok": True})
+    monkeypatch.setattr(rag_router.rag_service, "upload_document", upload_mock)
     transport = ASGITransport(app=app)
+    content = b"x" * (MAX_FILE_SIZE - 1)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         resp = await ac.post(
             "/rag/documents",
-            files={"file": ("a.txt", b"hello", "text/plain")},
+            files={"file": ("a.txt", content, "text/plain")},
         )
     assert resp.status_code == 200
     data = DocumentUploadResponse.model_validate(resp.json())
     assert data.ok is True
+    assert upload_mock.called
+
+
+@pytest.mark.asyncio
+async def test_upload_document_too_large_failure(monkeypatch) -> None:
+    upload_mock = AsyncMock(return_value={"ok": True})
+    monkeypatch.setattr(rag_router.rag_service, "upload_document", upload_mock)
+    transport = ASGITransport(app=app)
+    content = b"x" * (MAX_FILE_SIZE + 1)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.post(
+            "/rag/documents",
+            files={"file": ("a.txt", content, "text/plain")},
+        )
+    assert resp.status_code == 400
+    assert "maximum size" in resp.json()["detail"]
+    assert not upload_mock.called
 
 
 @pytest.mark.asyncio
