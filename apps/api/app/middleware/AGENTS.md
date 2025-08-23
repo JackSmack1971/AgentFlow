@@ -24,7 +24,7 @@ This document provides essential context for AI models interacting with this mid
     - `uvicorn[standard]` - ASGI server
     - `redis>=4.3.0` - Rate limiting backend
 *   **Platforms:** Linux containers, Kubernetes deployments, cloud platforms (AWS/GCP/Azure)
-*   **Package Manager:** pip with requirements.txt, optionally uv for faster dependency resolution
+*   **Package Manager:** uv with `pyproject.toml` and `uv.lock`
 
 ## 3. Architectural Patterns & Structure
 *   **Overall Architecture:** ASGI middleware stack with layered observability - security middleware first, then authentication, rate limiting, tracing, and finally application logic
@@ -72,12 +72,11 @@ This document provides essential context for AI models interacting with this mid
 *   **CI/CD Pipeline:** `.github/workflows/test.yml` - Automated testing, linting, and security checks
 
 ## 6. Development & Testing Workflow
-*   **Local Development Environment:** 
-    1. Create virtual environment: `python -m venv .venv && source .venv/bin/activate`
-    2. Install dependencies: `pip install -r requirements-dev.txt`
-    3. Set up pre-commit hooks: `pre-commit install`
-    4. Start Redis for rate limiting: `docker run -d -p 6379:6379 redis:7-alpine`
-    5. Run application: `uvicorn src.main:app --reload --log-level debug`
+*   **Local Development Environment:**
+    1. Install dependencies: `uv sync`
+    2. Set up pre-commit hooks: `pre-commit install`
+    3. Start Redis for rate limiting: `docker run -d -p 6379:6379 redis:7-alpine`
+    4. Run application: `uv run uvicorn src.main:app --reload --log-level debug`
 *   **Task Configuration:** Use Makefile or just commands for common tasks:
     - `make test` - Run full test suite with coverage
     - `make lint` - Run ruff linting and Black formatting

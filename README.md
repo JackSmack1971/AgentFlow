@@ -179,6 +179,28 @@ agentflow/
    - Frontend UI: http://localhost:3000
    - Health Check: http://localhost:8000/health
 
+### Dependency Management & Testing
+
+Use [uv](https://astral.sh/uv) for Python dependency management.
+
+#### Add or Remove Dependencies
+```bash
+uv add <package>
+uv remove <package>
+```
+
+#### Export Requirements
+```bash
+uv export --format=requirements-txt --output requirements.txt
+```
+
+#### Run Tests
+```bash
+uv run pytest
+```
+
+> **Security note:** Store secrets such as API keys in environment variables. Never commit them to source control.
+
 ## 🔧 Core Concepts & Architecture
 
 ### Memory Management System

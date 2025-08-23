@@ -90,14 +90,15 @@ secrets:
 # Multi-stage Dockerfile example
 FROM python:3.11-slim as builder
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
 FROM python:3.11-slim as runtime
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /app/.venv /app/.venv
 COPY . .
+ENV PATH="/app/.venv/bin:$PATH"
 USER appuser
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
