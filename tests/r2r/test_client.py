@@ -7,7 +7,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 
 from packages.r2r.client import R2RClient
 from packages.r2r.config import R2RConfig
-from packages.r2r.errors import AuthError
+from packages.r2r.errors import AuthError, BadRequestError
 from packages.r2r.models import DocV1
 
 
@@ -34,7 +34,9 @@ async def test_search_success(_tracer: InMemorySpanExporter) -> None:
     client = _client(httpx.MockTransport(handler))
     await client.search("query")
     spans = _tracer.get_finished_spans()
-    assert spans and spans[0].name == "r2r.request"
+    span = spans[0]
+    assert span.attributes["status_code"] == 200
+    assert span.attributes["duration_ms"] >= 0
     await client.close()
 
 
@@ -65,3 +67,27 @@ async def test_retry_and_error() -> None:
         await client.search("hello")
     assert attempts["n"] == 2
     await client.close()
+
+
+@pytest.mark.asyncio
+async def test_send_with_retry_success() -> None:
+    attempts = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        attempts["n"] += 1
+        if attempts["n"] < 2:
+            return httpx.Response(503)
+        return httpx.Response(200, json={"ok": True})
+
+    client = _client(httpx.MockTransport(handler))
+    response = await client._send_with_retry("GET", "/test")
+    assert response.status_code == 200
+    assert attempts["n"] == 2
+    await client.close()
+
+
+def test_parse_response_error() -> None:
+    client = _client(httpx.MockTransport(lambda r: httpx.Response(400)))
+    response = httpx.Response(400)
+    with pytest.raises(BadRequestError):
+        client._parse_response(response)
