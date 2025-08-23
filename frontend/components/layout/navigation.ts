@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
 import Link from 'next/link.js';
+import React, { useState } from 'react';
 
 interface NavItem {
   href: string;
@@ -11,6 +11,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Home' },
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/agents', label: 'Agents' },
+  { href: '/knowledge', label: 'Knowledge' },
 ];
 
 export default function Navigation(): JSX.Element {
