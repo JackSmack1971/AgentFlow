@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, Dict, Optional, Set
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 
 class ToolRegistry:
     """Registry for MCP tools with allowlist enforcement."""
 
-    def __init__(self, allowlist: Optional[Set[str]] = None) -> None:
+    def __init__(self, allowlist: set[str] | None = None) -> None:
         self.allowlist = allowlist
-        self._tools: Dict[str, Callable[..., Awaitable[Any]]] = {}
+        self._tools: dict[str, Callable[..., Awaitable[Any]]] = {}
 
     def register(
         self, name: str

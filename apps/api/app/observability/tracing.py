@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 def setup_tracing(
     service_name: str,
-    exporter: Optional["SpanExporter"] = None,
+    exporter: SpanExporter | None = None,
 ) -> None:
     """Configure OpenTelemetry if available."""
     try:

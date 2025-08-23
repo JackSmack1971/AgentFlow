@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Callable
+from collections.abc import Callable
 
 from pydantic_ai import Agent
 from pydantic_ai.models import ModelSettings

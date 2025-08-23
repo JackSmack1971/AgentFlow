@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from redis.asyncio import Redis
 from tenacity import (
@@ -29,7 +29,7 @@ class Cache:
         stop=stop_after_attempt(3),
         reraise=True,
     )
-    async def get(self, key: str) -> Optional[str]:
+    async def get(self, key: str) -> str | None:
         """Retrieve a value from cache."""
 
         try:

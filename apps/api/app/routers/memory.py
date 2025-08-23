@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import AsyncGenerator, List, Optional
+from collections.abc import AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
@@ -41,14 +41,14 @@ async def create_memory_item(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@router.get("/items", response_model=List[MemoryItem], summary="List memory items")
+@router.get("/items", response_model=list[MemoryItem], summary="List memory items")
 async def list_memory_items(
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    scope: Optional[MemoryScope] = None,
-    tags: Optional[List[str]] = Query(None),
+    scope: MemoryScope | None = None,
+    tags: list[str] | None = Query(None),
     user: User = Depends(require_roles(["user"])),
-) -> List[MemoryItem]:
+) -> list[MemoryItem]:
     return await memory_service.list_items(
         offset=offset, limit=limit, scope=scope, tags=tags
     )
@@ -94,39 +94,39 @@ async def delete_memory_item(
 
 
 @router.post(
-    "/items/import", response_model=List[MemoryItem], summary="Bulk import memory items"
+    "/items/import", response_model=list[MemoryItem], summary="Bulk import memory items"
 )
 async def import_memory_items(
-    items: List[MemoryItemCreate],
+    items: list[MemoryItemCreate],
     user: User = Depends(require_roles(["user"])),
-) -> List[MemoryItem]:
+) -> list[MemoryItem]:
     return await memory_service.bulk_import(items)
 
 
 @router.post(
-    "/items/export", response_model=List[MemoryItem], summary="Export memory items"
+    "/items/export", response_model=list[MemoryItem], summary="Export memory items"
 )
 async def export_memory_items(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1),
-    scope: Optional[MemoryScope] = None,
-    tags: Optional[List[str]] = Query(None),
+    scope: MemoryScope | None = None,
+    tags: list[str] | None = Query(None),
     user: User = Depends(require_roles(["user"])),
-) -> List[MemoryItem]:
+) -> list[MemoryItem]:
     return await memory_service.bulk_export(
         offset=offset, limit=limit, scope=scope, tags=tags
     )
 
 
-@router.get("/search", response_model=List[MemoryItem], summary="Search memory items")
+@router.get("/search", response_model=list[MemoryItem], summary="Search memory items")
 async def search_memory_items(
     q: str,
     offset: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
-    scope: Optional[MemoryScope] = None,
-    tags: Optional[List[str]] = Query(None),
+    scope: MemoryScope | None = None,
+    tags: list[str] | None = Query(None),
     user: User = Depends(require_roles(["user"])),
-) -> List[MemoryItem]:
+) -> list[MemoryItem]:
     return await memory_service.search_items(
         q, offset=offset, limit=limit, scope=scope, tags=tags
     )

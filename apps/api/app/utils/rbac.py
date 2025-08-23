@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Dict, Set
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -12,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..db.models import Membership, Role
 from ..exceptions import RBACError
 
-PERMISSIONS: Dict[str, Dict[str, Set[str]]] = {
+PERMISSIONS: dict[str, dict[str, set[str]]] = {
     "admin": {"*": {"*"}},
     "member": {"agents": {"read", "write"}},
     "viewer": {"agents": {"read"}},

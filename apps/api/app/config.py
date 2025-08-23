@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Sequence
+# `Sequence` should come from collections.abc rather than typing per PEP 585.
+from collections.abc import Sequence
 
 from pydantic import ValidationError
 
 from .core.settings import Settings, get_settings
 
+# Names of required settings keys.  Using Sequence from collections.abc avoids
+# deprecation warnings about the typing.Sequence alias.
 REQUIRED_SETTINGS: Sequence[str] = (
     "secret_key",
     "database_url",

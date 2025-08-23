@@ -7,7 +7,8 @@ import time
 from asyncio import Lock, TimeoutError
 from collections import deque
 from functools import wraps
-from typing import Any, Awaitable, Callable, Deque, Dict
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 logger = logging.getLogger(__name__)
 SECRET_PATTERN = re.compile(r"[A-Za-z0-9]{32,}")
@@ -31,8 +32,8 @@ class RateLimiter:
     def __init__(self, per_tool_limit: int = 60, global_limit: int = 60) -> None:
         self.per_tool_limit = per_tool_limit
         self.global_limit = global_limit
-        self.tool_calls: Dict[str, Deque[float]] = {}
-        self.global_calls: Deque[float] = deque()
+        self.tool_calls: dict[str, deque[float]] = {}
+        self.global_calls: deque[float] = deque()
         self.lock = Lock()
 
     async def check(self, name: str) -> None:

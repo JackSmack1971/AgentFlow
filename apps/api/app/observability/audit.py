@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
 
 from loguru import logger
 from pydantic import BaseModel
@@ -13,12 +12,12 @@ class AuditLogError(Exception):
 
 class AuditEvent(BaseModel):
     ts: datetime
-    request_id: Optional[str] = None
-    actor: Optional[str] = None
+    request_id: str | None = None
+    actor: str | None = None
     route: str
-    tools_called: List[str] = []
-    egress: List[str] = []
-    error: Optional[str] = None
+    tools_called: list[str] = []
+    egress: list[str] = []
+    error: str | None = None
 
 
 def log_audit(event: AuditEvent) -> None:

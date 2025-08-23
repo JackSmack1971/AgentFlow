@@ -43,9 +43,9 @@ models_mod.ModelSettings = DummyModelSettings
 sys.modules["pydantic_ai"] = mock_ai
 sys.modules["pydantic_ai.models"] = models_mod
 
-from apps.api.app.exceptions import AgentFlowError
-from apps.api.app.services.agents import AgentService
-from apps.api.app.services.agents import run_agent as module_run_agent
+from apps.api.app.exceptions import AgentFlowError  # noqa: E402
+from apps.api.app.services.agents import AgentService  # noqa: E402
+from apps.api.app.services.agents import run_agent as module_run_agent  # noqa: E402
 
 
 @pytest.mark.asyncio

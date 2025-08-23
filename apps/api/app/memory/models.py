@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, validator
 
@@ -23,12 +23,12 @@ class MemoryItemBase(BaseModel):
 
     text: str = Field(..., min_length=1)
     scope: MemoryScope = MemoryScope.USER
-    user_id: Optional[str] = None
-    agent_id: Optional[str] = None
-    session_id: Optional[str] = None
-    tags: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    ttl: Optional[int] = Field(None, ge=1, description="Time to live in seconds")
+    user_id: str | None = None
+    agent_id: str | None = None
+    session_id: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    ttl: int | None = Field(None, ge=1, description="Time to live in seconds")
 
 
 class MemoryItemCreate(MemoryItemBase):
@@ -38,24 +38,24 @@ class MemoryItemCreate(MemoryItemBase):
 class MemoryItemUpdate(BaseModel):
     """Model for updating memory items."""
 
-    text: Optional[str] = Field(None, min_length=1)
-    tags: Optional[List[str]] = None
-    metadata: Optional[Dict[str, Any]] = None
-    ttl: Optional[int] = Field(None, ge=1)
+    text: str | None = Field(None, min_length=1)
+    tags: list[str] | None = None
+    metadata: dict[str, Any] | None = None
+    ttl: int | None = Field(None, ge=1)
 
 
 class MemoryItem(MemoryItemBase):
     """Full memory item model."""
 
     id: str
-    embedding: List[float] = Field(default_factory=list)
+    embedding: list[float] = Field(default_factory=list)
     created_at: datetime
-    expires_at: Optional[datetime] = None
+    expires_at: datetime | None = None
 
     @validator("expires_at", always=True)
     def set_expires_at(
-        cls, value: Optional[datetime], values: Dict[str, Any]
-    ) -> Optional[datetime]:
+        cls, value: datetime | None, values: dict[str, Any]
+    ) -> datetime | None:
         ttl = values.get("ttl")
         if value is None and ttl is not None:
             return values["created_at"] + timedelta(seconds=ttl)

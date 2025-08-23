@@ -42,9 +42,9 @@ models_mod.ModelSettings = DummyModelSettings
 sys.modules["pydantic_ai"] = mock_ai
 sys.modules["pydantic_ai.models"] = models_mod
 
-from apps.api.app.dependencies import User, get_current_user
-from apps.api.app.main import app
-from apps.api.app.routers import memory as memory_router
+from apps.api.app.dependencies import User, get_current_user  # noqa: E402
+from apps.api.app.main import app  # noqa: E402
+from apps.api.app.routers import memory as memory_router  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

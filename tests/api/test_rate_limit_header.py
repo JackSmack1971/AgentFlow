@@ -1,6 +1,6 @@
 """Tests for rate limit handler Retry-After header."""
 
-from typing import Iterator
+from collections.abc import Iterator
 
 import pytest
 from fastapi import FastAPI, Request

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential
 
@@ -36,7 +36,7 @@ async def _run_with_retry(
             )
 
 
-def _init_backend() -> Optional[Any]:
+def _init_backend() -> Any | None:
     """Initialise Mem0 backend if available."""
 
     if Memory is None or MemoryClient is None:
@@ -84,9 +84,9 @@ def _init_backend() -> Optional[Any]:
 class ScopedMemoryService:
     """Manage MemoryItem instances with multi-level scoping."""
 
-    def __init__(self, backend: Optional[Any] = None) -> None:
+    def __init__(self, backend: Any | None = None) -> None:
         self.backend = backend or _init_backend()
-        self._items: Dict[str, MemoryItem] = {}
+        self._items: dict[str, MemoryItem] = {}
 
     async def add(self, item: MemoryItem) -> MemoryItem:
         """Store a memory item and return the stored instance."""
@@ -128,9 +128,9 @@ class ScopedMemoryService:
         self,
         query: str,
         *,
-        scope: Optional[str] = None,
+        scope: str | None = None,
         limit: int = 10,
-    ) -> List[MemoryItem]:
+    ) -> list[MemoryItem]:
         """Search memories by text content."""
 
         if not query.strip():

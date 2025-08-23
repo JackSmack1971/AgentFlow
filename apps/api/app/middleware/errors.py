@@ -1,8 +1,6 @@
-"""Error handling middleware producing RFC 7807 responses."""
+"""Error handling middleware producing RFC 7807 responses."""
 
 from __future__ import annotations
-
-from typing import Dict, Type
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -17,7 +15,7 @@ from ..exceptions import (
     TokenError,
 )
 
-EXCEPTION_STATUS: Dict[Type[AgentFlowError], int] = {
+EXCEPTION_STATUS: dict[type[AgentFlowError], int] = {
     AuthenticationError: status.HTTP_401_UNAUTHORIZED,
     InvalidCredentialsError: status.HTTP_401_UNAUTHORIZED,
     TokenError: status.HTTP_401_UNAUTHORIZED,
@@ -32,7 +30,7 @@ EXCEPTION_STATUS: Dict[Type[AgentFlowError], int] = {
 def _problem_response(
     request: Request, exc: AgentFlowError, status_code: int
 ) -> JSONResponse:
-    """Build RFC 7807 problem detail response."""
+    """Build RFC 7807 problem detail response."""
     code = exc.code.value
     content = {
         "type": f"/errors/{code}",

@@ -28,7 +28,8 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Respon
     """Return a JSON response for rate limit violations."""
     try:
         reset_time = getattr(exc, "reset_time", time.time() + DEFAULT_RETRY_AFTER)
-        setattr(exc, "reset_time", reset_time)
+        # Use direct attribute assignment instead of setattr per B010.
+        exc.reset_time = reset_time
         retry_after = max(int(reset_time - time.time()), 0)
         return JSONResponse(
             status_code=429,
