@@ -1,20 +1,14 @@
-"""Database session utilities."""
+"""Database session compatibility layer."""
 
-from collections.abc import AsyncGenerator
+from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from ..config import get_settings
-from ..exceptions import AgentFlowError
+from ..database import _engine as _engine_instance
+from ..database import _Session as _session_factory
+from ..database import get_session
 
-_engine = create_async_engine(get_settings().database_url, future=True)
-_Session = async_sessionmaker(_engine, expire_on_commit=False)
+engine: AsyncEngine = _engine_instance
+async_session_factory: async_sessionmaker[AsyncSession] = _session_factory
 
-
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Provide a database session and ensure proper cleanup."""
-    try:
-        async with _Session() as session:
-            yield session
-    except Exception as exc:  # pragma: no cover - infrastructure failure
-        raise AgentFlowError("Database session error") from exc
+__all__ = ["engine", "async_session_factory", "get_session"]
