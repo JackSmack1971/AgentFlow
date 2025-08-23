@@ -6,7 +6,6 @@ version = "0.1.0"
 description = "AgentFlow MVP scaffold"
 requires-python = ">=3.10"
 dependencies = [
-    "aiosqlite==0.21.0",
     "alembic==1.16.4",
     "cryptography==45.0.6",
     "email-validator==2.2.0",
@@ -38,6 +37,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "aiosqlite==0.21.0",
     "bandit",
     "black",
     "fakeredis==2.31.0",
@@ -61,6 +61,24 @@ exclude = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["apps", "packages"]
+
+[dependency-groups]
+default = []
+dev = [
+    "aiosqlite==0.21.0",
+    "bandit",
+    "black",
+    "fakeredis==2.31.0",
+    "flake8",
+    "hypothesis",
+    "mypy>=1.5",
+    "pre-commit>=3.0",
+    "pytest==8.4.1",
+    "pytest-asyncio==1.1.0",
+    "pytest-cov",
+    "respx==0.22.0",
+    "ruff>=0.1.0",
+]
 
 [tool.black]
 line-length = 88
