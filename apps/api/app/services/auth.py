@@ -1,15 +1,20 @@
-"""Authentication service utilities."""
+"""Authentication service with database-backed user storage."""
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
 from uuid import uuid4
 
 import jwt
 import pyotp
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import config
+from ..db.models import User
 from ..exceptions import InvalidCredentialsError, OTPError, TokenError
 from ..utils.password import hash_password, verify_password
 from . import token_store
@@ -20,8 +25,6 @@ store_refresh_token = token_store.store_refresh_token
 verify_refresh_token = token_store.verify_refresh_token
 
 settings = config.get_settings()
-USERS: dict[str, str] = {}
-OTP_SECRETS: dict[str, str] = {}
 
 # Password policy constants
 PASSWORD_POLICY_MIN_LENGTH = 8
@@ -31,55 +34,83 @@ PASSWORD_POLICY_REQUIRED_CLASSES: dict[str, Callable[[str], bool]] = {
     "digit": str.isdigit,
     "symbol": lambda c: not c.isalnum(),
 }
-PASSWORD_POLICY_BANNED: Iterable[str] = {
-    "password",
-    "123456",
-    "qwerty",
-}
+PASSWORD_POLICY_BANNED: Iterable[str] = {"password", "123456", "qwerty"}
 
 
 def generate_totp_secret() -> str:
     return pyotp.random_base32()
 
 
-async def verify_totp(email: str, code: str) -> None:
-    secret = OTP_SECRETS.get(email)
-    if not secret or not pyotp.TOTP(secret).verify(code):
-        raise OTPError("Invalid one-time password")
+class AuthService:
+    """Service for user registration and authentication."""
 
+    def __init__(self, db_session: AsyncSession) -> None:
+        self.db = db_session
 
-async def register_user(email: str, password: str) -> str:
-    if not email or not password:
-        raise InvalidCredentialsError("Email and password required")
+    async def _get_user(self, email: str) -> User | None:
+        stmt = select(User).where(User.email == email)
+        result = await asyncio.wait_for(self.db.execute(stmt), timeout=5)
+        return result.scalar_one_or_none()
 
-    if password.lower() in PASSWORD_POLICY_BANNED:
-        raise InvalidCredentialsError("Password is not allowed")
+    async def verify_totp(self, email: str, code: str) -> None:
+        user = await self._get_user(email)
+        if not user or not pyotp.TOTP(user.otp_secret).verify(code):
+            raise OTPError("Invalid one-time password")
 
-    if len(password) < PASSWORD_POLICY_MIN_LENGTH:
-        raise InvalidCredentialsError(
-            f"Password must be at least {PASSWORD_POLICY_MIN_LENGTH} characters long"
+    async def register_user(self, email: str, password: str) -> str:
+        if not email or not password:
+            raise InvalidCredentialsError("Email and password required")
+
+        if password.lower() in PASSWORD_POLICY_BANNED:
+            raise InvalidCredentialsError("Password is not allowed")
+
+        if len(password) < PASSWORD_POLICY_MIN_LENGTH:
+            raise InvalidCredentialsError(
+                f"Password must be at least {PASSWORD_POLICY_MIN_LENGTH} characters long"
+            )
+
+        missing = [
+            name
+            for name, check in PASSWORD_POLICY_REQUIRED_CLASSES.items()
+            if not any(check(ch) for ch in password)
+        ]
+        if missing:
+            raise InvalidCredentialsError("Password must contain " + ", ".join(missing))
+
+        secret = generate_totp_secret()
+        user = User(
+            email=email, otp_secret=secret, hashed_password=hash_password(password)
         )
+        self.db.add(user)
+        try:
+            await asyncio.wait_for(self.db.commit(), timeout=5)
+        except IntegrityError as exc:
+            await self.db.rollback()
+            raise InvalidCredentialsError("User already exists") from exc
+        except Exception as exc:  # noqa: BLE001
+            await self.db.rollback()
+            raise InvalidCredentialsError("Registration failed") from exc
+        return secret
 
-    missing = [
-        name
-        for name, check in PASSWORD_POLICY_REQUIRED_CLASSES.items()
-        if not any(check(ch) for ch in password)
-    ]
-    if missing:
-        raise InvalidCredentialsError("Password must contain " + ", ".join(missing))
+    async def authenticate_user(self, email: str, password: str, otp_code: str) -> bool:
+        user = await self._get_user(email)
+        if not user or not verify_password(password, user.hashed_password):
+            raise InvalidCredentialsError("Invalid email or password")
+        if not pyotp.TOTP(user.otp_secret).verify(otp_code):
+            raise OTPError("Invalid one-time password")
+        return True
 
-    USERS[email] = hash_password(password)
-    secret = generate_totp_secret()
-    OTP_SECRETS[email] = secret
-    return secret
+    async def generate_reset_token(self, email: str) -> str:
+        user = await self._get_user(email)
+        if not user:
+            raise InvalidCredentialsError("User not found")
+        return uuid4().hex
 
-
-async def authenticate_user(email: str, password: str, otp_code: str) -> bool:
-    stored = USERS.get(email)
-    if not stored or not verify_password(password, stored):
-        raise InvalidCredentialsError("Invalid email or password")
-    await verify_totp(email, otp_code)
-    return True
+    async def get_user_info(self, email: str) -> dict[str, str]:
+        user = await self._get_user(email)
+        if not user:
+            raise InvalidCredentialsError("User not found")
+        return {"email": user.email}
 
 
 async def create_access_token(subject: str) -> str:
@@ -108,13 +139,14 @@ async def decode_token(token: str) -> str:
         raise TokenError("Invalid token") from exc
 
 
-async def generate_reset_token(email: str) -> str:
-    if email not in USERS:
-        raise InvalidCredentialsError("User not found")
-    return uuid4().hex
-
-
-async def get_user_info(email: str) -> dict[str, str]:
-    if email not in USERS:
-        raise InvalidCredentialsError("User not found")
-    return {"email": email}
+__all__ = [
+    "AuthService",
+    "create_access_token",
+    "create_refresh_token",
+    "decode_token",
+    "generate_totp_secret",
+    "is_refresh_token_blacklisted",
+    "revoke_refresh_token",
+    "store_refresh_token",
+    "verify_refresh_token",
+]

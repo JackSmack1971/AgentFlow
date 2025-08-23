@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import List
 
 from sqlalchemy import DateTime, ForeignKey, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -17,10 +16,10 @@ class Organization(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
-    agents: Mapped[List["Agent"]] = relationship(
+    agents: Mapped[list[Agent]] = relationship(
         back_populates="organization", cascade="all, delete-orphan"
     )
-    memberships: Mapped[List["Membership"]] = relationship(
+    memberships: Mapped[list[Membership]] = relationship(
         back_populates="organization", cascade="all, delete-orphan"
     )
 
@@ -31,10 +30,11 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(200), nullable=False)
-    memberships: Mapped[List["Membership"]] = relationship(
+    otp_secret: Mapped[str] = mapped_column(String(32), nullable=False)
+    memberships: Mapped[list[Membership]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
-    api_keys: Mapped[List["APIKey"]] = relationship(
+    api_keys: Mapped[list[APIKey]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -55,7 +55,7 @@ class Role(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    memberships: Mapped[List["Membership"]] = relationship(
+    memberships: Mapped[list[Membership]] = relationship(
         back_populates="role", cascade="all, delete-orphan"
     )
 

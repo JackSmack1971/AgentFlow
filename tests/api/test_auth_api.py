@@ -1,0 +1,298 @@
+import os
+import pathlib
+import sys
+import types
+import uuid
+from collections.abc import Iterator
+
+import fakeredis.aioredis
+import pyotp
+import pytest
+from httpx import ASGITransport, AsyncClient, Response
+from sqlalchemy.ext.asyncio import AsyncSession
+
+sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
+
+os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://localhost/test")
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
+os.environ.setdefault("SECRET_KEY", "test")
+os.environ.setdefault("OPENAI_API_KEY", "test")
+
+from apps.api.app import config  # noqa: E402
+from apps.api.app.core.cache import Cache  # noqa: E402
+from apps.api.app.database import get_session  # noqa: E402
+from apps.api.app.main import app  # noqa: E402
+from apps.api.app.models.auth import LogoutResponse  # noqa: E402
+from apps.api.app.services import auth as auth_service  # noqa: E402
+from apps.api.app.services import token_store  # noqa: E402
+
+# Stub heavy dependencies
+mock_ai = types.ModuleType("pydantic_ai")
+
+
+class DummyAgent:
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        self.settings = None
+
+    async def run(self, prompt: str):  # pragma: no cover - stub
+        class R:
+            output_text = ""
+
+        return R()
+
+
+mock_ai.Agent = DummyAgent
+models_mod = types.ModuleType("pydantic_ai.models")
+
+
+class DummyModelSettings:
+    def __init__(self, **kwargs: object) -> None:
+        pass
+
+
+models_mod.ModelSettings = DummyModelSettings
+sys.modules["pydantic_ai"] = mock_ai
+sys.modules["pydantic_ai.models"] = models_mod
+
+config.get_settings.cache_clear()
+
+
+def assert_request_id(resp: Response) -> None:
+    assert "X-Request-ID" in resp.headers
+    uuid.UUID(resp.headers["X-Request-ID"])
+
+
+@pytest.fixture(autouse=True)
+def override_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    cache = Cache(fake)
+    monkeypatch.setattr(token_store, "get_cache", lambda: cache)
+    yield
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter() -> Iterator[None]:
+    app.state.limiter.reset()
+    yield
+    app.state.limiter.reset()
+
+
+@pytest.fixture
+async def client(session: AsyncSession):
+    async def override_get_session():
+        yield session
+
+    app.dependency_overrides[get_session] = override_get_session
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+    app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_register_and_login(client: AsyncClient) -> None:
+    resp = await client.post(
+        "/auth/register",
+        json={"email": "a@b.com", "password": "Password1!"},
+    )
+    assert_request_id(resp)
+    assert resp.status_code == 201
+    secret = resp.json()["otp_secret"]
+    code = pyotp.TOTP(secret).now()
+    resp = await client.post(
+        "/auth/login",
+        json={"email": "a@b.com", "password": "Password1!", "otp_code": code},
+    )
+    assert_request_id(resp)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "access_token" in data and "refresh_token" in data
+
+
+@pytest.mark.asyncio
+async def test_refresh_rotation(client: AsyncClient) -> None:
+    reg = await client.post(
+        "/auth/register",
+        json={"email": "a@b.com", "password": "Password1!"},
+    )
+    assert_request_id(reg)
+    secret = reg.json()["otp_secret"]
+    code = pyotp.TOTP(secret).now()
+    login = await client.post(
+        "/auth/login",
+        json={"email": "a@b.com", "password": "Password1!", "otp_code": code},
+    )
+    assert_request_id(login)
+    token1 = login.json()["refresh_token"]
+    first = await client.post("/auth/refresh", json={"refresh_token": token1})
+    assert_request_id(first)
+    assert first.status_code == 200
+    token2 = first.json()["refresh_token"]
+    replay = await client.post("/auth/refresh", json={"refresh_token": token1})
+    assert_request_id(replay)
+    assert replay.status_code == 401
+    second = await client.post("/auth/refresh", json={"refresh_token": token2})
+    assert_request_id(second)
+    assert second.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_logout_blacklists_token(client: AsyncClient) -> None:
+    reg = await client.post(
+        "/auth/register",
+        json={"email": "a@b.com", "password": "Password1!"},
+    )
+    assert_request_id(reg)
+    secret = reg.json()["otp_secret"]
+    code = pyotp.TOTP(secret).now()
+    login = await client.post(
+        "/auth/login",
+        json={"email": "a@b.com", "password": "Password1!", "otp_code": code},
+    )
+    assert_request_id(login)
+    token = login.json()["refresh_token"]
+    resp = await client.post("/auth/logout", json={"refresh_token": token})
+    assert_request_id(resp)
+    assert resp.status_code == 200
+    data = LogoutResponse(**resp.json())
+    assert data.status == "ok"
+    rejected = await client.post("/auth/refresh", json={"refresh_token": token})
+    assert_request_id(rejected)
+    assert rejected.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_refresh_invalid_token(client: AsyncClient) -> None:
+    resp = await client.post("/auth/refresh", json={"refresh_token": "bad"})
+    assert_request_id(resp)
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_login_invalid_credentials(client: AsyncClient) -> None:
+    reg = await client.post(
+        "/auth/register",
+        json={"email": "a@b.com", "password": "Password1!"},
+    )
+    assert_request_id(reg)
+    secret = reg.json()["otp_secret"]
+    code = pyotp.TOTP(secret).now()
+    resp = await client.post(
+        "/auth/login",
+        json={"email": "a@b.com", "password": "WrongPass1!", "otp_code": code},
+    )
+    assert_request_id(resp)
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_login_invalid_otp(client: AsyncClient) -> None:
+    reg = await client.post(
+        "/auth/register",
+        json={"email": "a@b.com", "password": "Password1!"},
+    )
+    assert_request_id(reg)
+    wrong = "000000"
+    resp = await client.post(
+        "/auth/login",
+        json={"email": "a@b.com", "password": "Password1!", "otp_code": wrong},
+    )
+    assert_request_id(resp)
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_exceeded(client: AsyncClient) -> None:
+    for _ in range(5):
+        await client.post("/auth/refresh", json={"refresh_token": "bad"})
+    resp = await client.post("/auth/refresh", json={"refresh_token": "bad"})
+    assert_request_id(resp)
+    assert resp.status_code == 429
+    assert resp.json()["detail"] == "Too many requests"
+
+
+@pytest.mark.asyncio
+async def test_register_password_too_short(client: AsyncClient) -> None:
+    resp = await client.post(
+        "/auth/register",
+        json={"email": "a@b.com", "password": "short"},
+    )
+    assert_request_id(resp)
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_register_password_missing_uppercase(client: AsyncClient) -> None:
+    resp = await client.post(
+        "/auth/register",
+        json={"email": "a@b.com", "password": "password1!"},
+    )
+    assert_request_id(resp)
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_register_password_banned(client: AsyncClient) -> None:
+    resp = await client.post(
+        "/auth/register",
+        json={"email": "a@b.com", "password": "password"},
+    )
+    assert_request_id(resp)
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_password_reset_and_me(client: AsyncClient) -> None:
+    reg = await client.post(
+        "/auth/register",
+        json={"email": "a@b.com", "password": "Password1!"},
+    )
+    assert_request_id(reg)
+    secret = reg.json()["otp_secret"]
+    reset = await client.post("/auth/reset", json={"email": "a@b.com"})
+    assert_request_id(reset)
+    assert reset.status_code == 200
+    token = reset.json()["reset_token"]
+    assert token
+    code = pyotp.TOTP(secret).now()
+    login = await client.post(
+        "/auth/login",
+        json={"email": "a@b.com", "password": "Password1!", "otp_code": code},
+    )
+    assert_request_id(login)
+    access = login.json()["access_token"]
+    me = await client.get("/auth/me", headers={"Authorization": f"Bearer {access}"})
+    assert_request_id(me)
+    assert me.status_code == 200
+    assert me.json()["email"] == "a@b.com"
+
+
+@pytest.mark.asyncio
+async def test_me_unauthorized(client: AsyncClient) -> None:
+    resp = await client.get("/auth/me")
+    assert_request_id(resp)
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_me_bad_token(client: AsyncClient) -> None:
+    original = auth_service.decode_token
+
+    async def fake_decode_token(token: str) -> str:
+        raise auth_service.TokenError("Invalid token")
+
+    auth_service.decode_token = fake_decode_token
+    try:
+        resp = await client.get("/auth/me", headers={"Authorization": "Bearer bad"})
+        assert_request_id(resp)
+        assert resp.status_code == 401
+    finally:
+        auth_service.decode_token = original
+
+
+@pytest.mark.asyncio
+async def test_reset_unknown_user(client: AsyncClient) -> None:
+    resp = await client.post("/auth/reset", json={"email": "a@b.com"})
+    assert_request_id(resp)
+    assert resp.status_code == 404

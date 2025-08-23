@@ -3,9 +3,11 @@ from typing import Awaitable, Callable, List  # isort:skip  # noqa: UP035
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from .database import get_session
 from .exceptions import TokenError
-from .services import auth as auth_service
+from .services.auth import AuthService, decode_token
 
 security = HTTPBearer()
 
@@ -19,7 +21,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> User:
     try:
-        sub = await auth_service.decode_token(credentials.credentials)
+        sub = await decode_token(credentials.credentials)
     except TokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -27,6 +29,13 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
     return User(sub=sub)
+
+
+async def get_auth_service(
+    session: AsyncSession = Depends(get_session),
+) -> AuthService:
+    """Provide AuthService with database session."""
+    return AuthService(session)
 
 
 def require_roles(
