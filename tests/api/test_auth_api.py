@@ -203,6 +203,41 @@ async def test_login_invalid_otp(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_login_rate_limit_exceeded(client: AsyncClient) -> None:
+    app.state.limiter.reset()
+    try:
+        reg = await client.post(
+            "/auth/register", json={"email": "a@b.com", "password": "Password1!"}
+        )
+        secret = reg.json()["otp_secret"]
+        for _ in range(5):
+            code = pyotp.TOTP(secret).now()
+            ok = await client.post(
+                "/auth/login",
+                json={
+                    "email": "a@b.com",
+                    "password": "Password1!",
+                    "otp_code": code,
+                },
+            )
+            assert ok.status_code == 200
+        code = pyotp.TOTP(secret).now()
+        resp = await client.post(
+            "/auth/login",
+            json={
+                "email": "a@b.com",
+                "password": "Password1!",
+                "otp_code": code,
+            },
+        )
+        assert_request_id(resp)
+        assert resp.status_code == 429
+        assert resp.json() == {"detail": "Too many requests"}
+    finally:
+        app.state.limiter.reset()
+
+
+@pytest.mark.asyncio
 async def test_rate_limit_exceeded(client: AsyncClient) -> None:
     for _ in range(5):
         await client.post("/auth/refresh", json={"refresh_token": "bad"})
