@@ -24,7 +24,7 @@ cryptography==45.0.6
 pytest==8.4.1
 pytest-asyncio==1.1.0
 respx==0.22.0
-hypothesis==6.112.1
+hypothesis
 pyjwt==2.10.1
 tenacity==9.1.2
 fakeredis==2.31.0
