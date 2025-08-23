@@ -1,204 +1,256 @@
----
-trigger: glob
-description: Comprehensive rules for Postman API testing, collection organization, Newman CLI usage, and automation best practices
-globs: ["*.postman_collection.json", "*.postman_environment.json", "**/postman/**", "**/newman/**"]
----
+# AGENTS.md: API Testing Standards
 
-# Postman API Testing Rules
+This document provides specific guidance for AI models working with AgentFlow API testing using Postman collections located in `/postman/`. These guidelines are derived from the Postman testing ruleset and GitHub Workflows integration standards.
 
-## Collection Organization and Structure
+## 1. Project Scope & Architecture
+*   **Primary Purpose:** API testing collections and environments for AgentFlow platform with CI/CD integration via Newman
+*   **Core Technologies:** Postman collections, Newman CLI, environment variables, automated API testing
+*   **Architecture Pattern:** Collection-based testing with environment separation and CI/CD automation
 
-- **Use semantic naming**: Name collections, folders, and requests with descriptive, consistent naming conventions (e.g., "User Management API v2", "POST Create User Account")
-- **Organize hierarchically**: Group related requests into folders, use subfolders for complex APIs, and maintain logical request ordering within folders
-- **Include comprehensive descriptions**: Add descriptions to collections, folders, and individual requests explaining their purpose, expected behavior, and any special considerations
-- **Set collection-level variables**: Define base URLs, API versions, and common parameters as collection variables using `{{variableName}}` syntax
-- **Use environment separation**: Create separate environments for development, staging, and production with appropriate variable values
-- **Version control collections**: Export collections as JSON files and store in version control, using meaningful commit messages for changes
+## 2. Collection Organization Standards
 
-## Request Configuration Best Practices
+### Directory Structure
+*   **REQUIRED:** Store collections and environments under `/postman/`:
+    ```
+    postman/
+    ├── collections/
+    │   ├── auth.postman_collection.json
+    │   ├── agents.postman_collection.json
+    │   ├── memory.postman_collection.json
+    │   ├── rag.postman_collection.json
+    │   └── health.postman_collection.json
+    ├── environments/
+    │   ├── development.postman_environment.json
+    │   ├── staging.postman_environment.json
+    │   └── production.postman_environment.json
+    └── data/
+        ├── test-users.json
+        └── sample-agents.json
+    ```
 
-- **Use HTTPS protocols**: Always prefer HTTPS over HTTP for API calls to ensure encrypted communication
-- **Configure proper headers**: Set appropriate `Content-Type`, `Accept`, and `User-Agent` headers for each request type
-- **Implement authentication consistently**: Use collection-level or folder-level authentication when possible, choose appropriate auth types (Bearer Token, Basic Auth, OAuth 2.0, API Key)
-- **Parameterize dynamic values**: Use variables for IDs, timestamps, and other dynamic values instead of hardcoding them in request URLs or bodies
-- **Handle file uploads correctly**: Use `formdata` body type for file uploads, ensure files are in the working directory when using Newman
-- **Set appropriate timeouts**: Configure reasonable timeout values for requests to prevent hanging in automated runs
+### Collection Structure Requirements
+*   **MANDATORY:** Organize requests by feature domain matching API router structure
+*   **REQUIRED:** Use descriptive folder names that match `/app/routers/` organization
+*   **CRITICAL:** Include both success and failure test scenarios for each endpoint
+*   **REQUIRED:** Implement proper request dependencies and sequencing
 
-## Test Scripts and Assertions
+## 3. Environment Management
 
-- **Write comprehensive test assertions**: Use `pm.test()` with descriptive names and `pm.expect()` for readable assertions
+### Variable Configuration
+*   **CRITICAL:** Use separate environments for development, staging, and production
+*   **MANDATORY:** Store sensitive data only in "current value" field, keep "initial value" empty
+*   **REQUIRED:** Use `{{baseUrl}}` variable for all API endpoints
+*   **CRITICAL:** Implement proper variable scoping (global, collection, environment)
+
+```json
+{
+  "name": "development",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000",
+      "enabled": true
+    },
+    {
+      "key": "api_key",
+      "value": "",
+      "enabled": true
+    }
+  ]
+}
+```
+
+### Security Requirements
+*   **CRITICAL:** Never hardcode API keys, passwords, or tokens in collections
+*   **MANDATORY:** Use environment variables for all sensitive authentication data
+*   **REQUIRED:** Implement token refresh logic in pre-request scripts for long-running test suites
+*   **CRITICAL:** Mask sensitive variables in CI/CD environments
+
+## 4. Request and Response Patterns
+
+### Request Structure Standards
+*   **REQUIRED:** Use consistent header patterns across all requests
+*   **MANDATORY:** Include proper `Content-Type` headers for POST/PUT requests
+*   **CRITICAL:** Implement proper authentication patterns (Bearer tokens, API keys)
+*   **REQUIRED:** Use variables for dynamic data instead of hardcoded values
+
+```javascript
+// Pre-request script example
+pm.environment.set("timestamp", Date.now());
+pm.environment.set("requestId", pm.variables.replaceIn("{{$guid}}"));
+```
+
+### Response Validation
+*   **MANDATORY:** Use `pm.test()` with descriptive names and `pm.expect()` for assertions
+*   **REQUIRED:** Validate response status codes, headers, and body structure
+*   **CRITICAL:** Include performance assertions with reasonable thresholds
+*   **REQUIRED:** Extract and store response data for subsequent requests
+
 ```javascript
 pm.test("Status code is 200", function () {
     pm.response.to.have.status(200);
 });
 
 pm.test("Response time is acceptable", function () {
-    pm.expect(pm.response.responseTime).to.be.lte(1000);
+    pm.expect(pm.response.responseTime).to.be.below(2000);
+});
+
+pm.test("Response has required fields", function () {
+    const responseJson = pm.response.json();
+    pm.expect(responseJson).to.have.property("id");
+    pm.expect(responseJson).to.have.property("name");
 });
 ```
 
-- **Validate response structure**: Use JSON schema validation for complex response structures
+## 5. Authentication Testing Patterns
+
+### Token Management
+*   **REQUIRED:** Implement automatic token refresh logic
+*   **MANDATORY:** Test authentication scenarios: valid auth, expired tokens, unauthorized access
+*   **CRITICAL:** Validate proper security headers in responses
+*   **REQUIRED:** Test CORS configuration and policies
+
 ```javascript
-const schema = {
+// Authentication pre-request script
+const tokenExpiry = pm.environment.get("token_expiry");
+const currentTime = Date.now();
+
+if (!tokenExpiry || currentTime >= tokenExpiry) {
+    // Refresh token logic
+    pm.sendRequest({
+        url: pm.environment.get("baseUrl") + "/auth/refresh",
+        method: "POST",
+        header: {
+            "Content-Type": "application/json"
+        },
+        body: {
+            mode: "raw",
+            raw: JSON.stringify({
+                refresh_token: pm.environment.get("refresh_token")
+            })
+        }
+    }, function(err, response) {
+        if (response.code === 200) {
+            const tokens = response.json();
+            pm.environment.set("access_token", tokens.access_token);
+            pm.environment.set("token_expiry", currentTime + (tokens.expires_in * 1000));
+        }
+    });
+}
+```
+
+## 6. Schema Validation Standards
+
+### JSON Schema Validation
+*   **REQUIRED:** Use JSON schema validation for complex response structures
+*   **MANDATORY:** Maintain schemas for all API response models
+*   **CRITICAL:** Validate both success and error response schemas
+*   **REQUIRED:** Update schemas when API contracts change
+
+```javascript
+const responseSchema = {
     type: "object",
-    required: ["id", "name"],
+    required: ["id", "name", "status", "created_at"],
     properties: {
-        id: { type: "number" },
-        name: { type: "string" }
+        id: { type: "string", format: "uuid" },
+        name: { type: "string", minLength: 1, maxLength: 100 },
+        status: { type: "string", enum: ["active", "inactive"] },
+        created_at: { type: "string", format: "date-time" }
     }
 };
 
 pm.test("Response schema is valid", function() {
-    pm.response.to.have.jsonSchema(schema);
+    pm.response.to.have.jsonSchema(responseSchema);
 });
 ```
 
-- **Extract and store response data**: Capture data from responses for use in subsequent requests
+## 7. Newman CLI Integration
+
+### CI/CD Configuration
+*   **MANDATORY:** Include Newman execution in GitHub Actions workflows
+*   **REQUIRED:** Use appropriate reporter formats for CI environments
+*   **CRITICAL:** Set proper exit codes and error handling
+*   **REQUIRED:** Generate HTML reports as CI artifacts
+
+```bash
+# Newman execution in CI
+newman run postman/collections/auth.postman_collection.json \
+    --environment postman/environments/staging.postman_environment.json \
+    --reporters cli,junit,html \
+    --reporter-junit-export results/auth-results.xml \
+    --reporter-html-export results/auth-report.html \
+    --timeout-request 10000 \
+    --timeout-script 5000
+```
+
+### Performance Thresholds
+*   **REQUIRED:** Set response time thresholds for critical endpoints
+*   **MANDATORY:** Monitor and alert on performance degradation
+*   **CRITICAL:** Include latency assertions in test scripts
+*   **REQUIRED:** Use environment-specific performance baselines
+
+## 8. Data Management
+
+### Test Data Organization
+*   **REQUIRED:** Use external data files for complex test scenarios
+*   **MANDATORY:** Implement proper test data cleanup procedures
+*   **CRITICAL:** Avoid using production data in test environments
+*   **REQUIRED:** Create realistic but anonymized test datasets
+
 ```javascript
-pm.test("Extract user ID", function () {
-    const responseJson = pm.response.json();
-    pm.environment.set("userId", responseJson.id);
+// Using external data file
+const testData = pm.iterationData.get("agent_data");
+pm.request.body.raw = JSON.stringify({
+    name: testData.name,
+    description: testData.description,
+    model: testData.model
 });
 ```
 
-- **Handle error scenarios**: Write tests for both success and failure cases, validate error message formats
-- **Use pre-request scripts**: Set up test data, generate timestamps, or perform calculations before requests
-- **Avoid hardcoded test data**: Use variables and data files for test inputs to improve maintainability
+## 9. Error Testing Patterns
 
-## Security and Authentication
+### Error Scenario Coverage
+*   **MANDATORY:** Test all documented error conditions
+*   **REQUIRED:** Validate error response formats and codes
+*   **CRITICAL:** Test edge cases and boundary conditions
+*   **REQUIRED:** Verify proper error message formats
 
-- **Secure sensitive data**: Store API keys, passwords, and tokens in environment variables, never hardcode in collections
-- **Use initial and current values**: Set sensitive data only in "current value" field in environments, keep "initial value" empty for security
-- **Implement proper token refresh**: Write scripts to automatically refresh expired authentication tokens
-- **Test authentication scenarios**: Include tests for valid authentication, expired tokens, and unauthorized access attempts
-- **Validate HTTPS usage**: Ensure all requests use HTTPS, test for proper SSL certificate validation
-- **Check for security headers**: Assert presence of security headers like `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`
-- **Test CORS configuration**: Verify proper CORS headers and policies are implemented correctly
-
-## Newman CLI and Automation
-
-- **Use specific Newman commands**: Structure Newman runs with clear parameters
-```bash
-newman run collection.json \
-  --environment environment.json \
-  --globals globals.json \
-  --reporters cli,html,json \
-  --reporter-html-export report.html \
-  --reporter-json-export report.json \
-  --timeout-request 10000 \
-  --delay-request 500
-```
-
-- **Configure CI/CD integration**: Set up Newman in build pipelines with proper error handling
-```bash
-# Exit on first failure for fast feedback
-newman run collection.json -e environment.json --bail
-
-# Generate detailed reports for analysis
-newman run collection.json -e environment.json \
-  --reporters cli,html \
-  --reporter-html-export newman-report.html
-```
-
-- **Use environment files**: Create separate environment files for different deployment stages
-- **Handle exit codes**: Check Newman exit codes in CI/CD scripts (0 = success, 1 = failure)
-- **Set up data-driven testing**: Use CSV or JSON data files for parameterized test runs
-```bash
-newman run collection.json \
-  --iteration-data test-data.csv \
-  --iteration-count 10
-```
-
-- **Configure proxy settings**: Use environment variables for proxy configuration when needed
-```bash
-export HTTP_PROXY=http://proxy.company.com:8080
-export HTTPS_PROXY=http://proxy.company.com:8080
-```
-
-## Performance and Monitoring
-
-- **Set performance assertions**: Include response time validations in test scripts
 ```javascript
-pm.test("Response time is under 2 seconds", function () {
-    pm.expect(pm.response.responseTime).to.be.below(2000);
-});
-```
-
-- **Monitor API health**: Use Postman Monitors for continuous API health checks in production environments
-- **Test under load**: Use collection runner or Newman with iteration data to simulate multiple requests
-- **Validate response sizes**: Assert reasonable response payload sizes to catch data bloat
-- **Track API changes**: Monitor for unexpected changes in response structure or performance
-- **Use request delays**: Add delays between requests in automated runs to avoid overwhelming APIs
-```bash
-newman run collection.json --delay-request 1000  # 1 second delay
-```
-
-## Error Handling and Troubleshooting
-
-- **Implement comprehensive error checking**: Test for various HTTP status codes and error conditions
-```javascript
-pm.test("Handle error responses gracefully", function () {
-    if (pm.response.code >= 400) {
+pm.test("Error response format is correct", function() {
+    if (pm.response.code !== 200) {
         const errorResponse = pm.response.json();
-        pm.expect(errorResponse).to.have.property('error');
-        pm.expect(errorResponse.error).to.have.property('message');
+        pm.expect(errorResponse).to.have.property("error");
+        pm.expect(errorResponse).to.have.property("message");
+        pm.expect(errorResponse).to.have.property("code");
     }
 });
 ```
 
-- **Use detailed logging**: Add console.log statements for debugging complex flows
-- **Validate error message formats**: Ensure error responses follow consistent structure
-- **Handle network timeouts**: Set appropriate timeout values and test timeout scenarios
-- **Debug failed requests**: Use Newman's verbose output for troubleshooting
-```bash
-newman run collection.json --verbose
-```
+## 10. Collection Maintenance Standards
 
-- **Check environment variable resolution**: Verify all variables are properly resolved before running tests
-- **Test authentication failures**: Include scenarios for expired tokens, invalid credentials, and permission errors
+### Version Control
+*   **REQUIRED:** Export collections and environments to JSON files
+*   **MANDATORY:** Use semantic versioning for collection releases
+*   **CRITICAL:** Document API changes in collection descriptions
+*   **REQUIRED:** Maintain backward compatibility within major versions
 
-## Data Management and Environments
+### Documentation Requirements
+*   **MANDATORY:** Include comprehensive request descriptions
+*   **REQUIRED:** Document expected responses and error conditions
+*   **CRITICAL:** Provide usage examples for complex endpoints
+*   **REQUIRED:** Keep documentation synchronized with API changes
 
-- **Use environment hierarchies**: Structure environments with global, collection, and environment variables in proper precedence
-- **Implement data cleanup**: Include teardown requests to clean up test data after runs
-- **Validate test data**: Ensure test data is valid and follows API requirements
-- **Use meaningful variable names**: Choose descriptive names for variables that indicate their purpose
-- **Document variable usage**: Include comments or descriptions explaining variable purposes
-- **Handle dynamic data**: Generate unique identifiers, timestamps, and random values as needed
-```javascript
-// Generate unique email for testing
-const timestamp = Date.now();
-pm.environment.set("testEmail", `test.user.${timestamp}@example.com`);
-```
+## 11. SSL/TLS Requirements [Hard Constraint]
+*   **CRITICAL:** SSL/TLS must be enabled in production environments
+*   **MANDATORY:** Use `--insecure` flag only in development environments
+*   **REQUIRED:** Test certificate validation in staging environments
+*   **CRITICAL:** Never ignore SSL errors in production Newman runs
 
-## Collection Maintenance and Best Practices
-
-- **Regular collection reviews**: Audit collections monthly to remove obsolete tests and update outdated scenarios
-- **Use collection templates**: Create reusable templates for common API patterns and testing scenarios
-- **Document API changes**: Update collections promptly when API contracts change
-- **Implement test isolation**: Ensure tests can run independently without relying on specific execution order
-- **Use semantic versioning**: Version collection exports using semantic versioning principles
-- **Create comprehensive documentation**: Generate and maintain API documentation from collections
-- **Share collections effectively**: Use Postman workspaces for team collaboration and collection sharing
-- **Export regularly**: Backup collections and environments by exporting JSON files to version control
-
-## Known Issues and Mitigations
-
-- **Variable resolution failures**: Ensure all referenced variables are defined in appropriate scope (global, collection, environment)
-- **Authentication token expiry**: Implement token refresh logic in pre-request scripts for long-running test suites
-- **CORS issues in browser**: Use Postman desktop app or Newman CLI for requests that fail due to CORS in browser environments
-- **File upload limitations**: Ensure files for upload are in the correct directory when using Newman CLI
-- **Memory issues with large responses**: Use streaming or pagination for APIs returning large datasets
-- **Flaky network tests**: Implement retry logic and appropriate timeouts for unreliable network conditions
-- **Environment variable conflicts**: Use specific naming conventions to avoid variable name collisions between different scopes
-- **SSL certificate errors**: Configure Newman to ignore SSL errors only in development environments using `--insecure` flag
-
-## Integration and Collaboration
-
-- **API-first development**: Design and test APIs using Postman before implementation begins
-- **Mock server usage**: Create mock servers for frontend development while backend APIs are under development
-- **Team workspace management**: Organize team workspaces with proper access controls and shared resources
-- **Documentation automation**: Generate live API documentation from collections and keep it synchronized with code
-- **CI/CD pipeline integration**: Include API tests as mandatory gates in deployment pipelines
-- **Performance monitoring**: Set up continuous monitoring for critical API endpoints in production
-- **Test data management**: Coordinate test data setup and cleanup across team members and environments
+## 12. Forbidden Patterns
+*   **NEVER** hardcode sensitive data in collection files
+*   **NEVER** ignore SSL certificate errors in production
+*   **NEVER** rely on specific execution order between unrelated tests
+*   **NEVER** use production credentials in non-production environments
+*   **NEVER** skip error scenario testing
+*   **NEVER** commit environment files with sensitive current values
+*   **NEVER** use deprecated Postman features or legacy formats
