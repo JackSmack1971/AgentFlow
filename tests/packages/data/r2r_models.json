@@ -1,0 +1,1 @@
+{"doc":{"content":"hello world","metadata":{"author":"alice","length":11}},"index_ack":{"id":"doc-1","status":"indexed"},"search_result":{"hits":[{"id":"1","score":0.9,"snippet":"world"}]}}
