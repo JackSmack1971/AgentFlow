@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
 import secrets
 
@@ -12,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..exceptions import SeedError
 from ..utils.crypto import encrypt
+from ..utils.password import hash_password
 from .models import APIKey, Membership, Organization, Role, User
 
 
@@ -32,12 +32,14 @@ async def seed_initial_data(session: AsyncSession) -> None:
         await session.flush()
 
         org = Organization(name=data.org_name)
-        hashed = hashlib.sha256(data.user_password.encode()).hexdigest()
+        hashed = hash_password(data.user_password)
         user = User(email=data.user_email, hashed_password=hashed)
         session.add_all([org, user])
         await session.flush()
 
         admin = await session.scalar(select(Role).where(Role.name == "admin"))
+        if not admin:
+            raise SeedError("Admin role missing")
         session.add(
             Membership(user_id=user.id, organization_id=org.id, role_id=admin.id)
         )

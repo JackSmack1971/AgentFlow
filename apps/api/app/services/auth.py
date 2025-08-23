@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
+from collections.abc import Callable, Iterable
 from datetime import datetime, timedelta
-from typing import Callable, Dict, Iterable
 from uuid import uuid4
 
 import jwt
@@ -12,6 +11,7 @@ import pyotp
 
 from .. import config
 from ..exceptions import InvalidCredentialsError, OTPError, TokenError
+from ..utils.password import hash_password, verify_password
 from . import token_store
 
 is_refresh_token_blacklisted = token_store.is_refresh_token_blacklisted
@@ -20,12 +20,12 @@ store_refresh_token = token_store.store_refresh_token
 verify_refresh_token = token_store.verify_refresh_token
 
 settings = config.get_settings()
-USERS: Dict[str, str] = {}
-OTP_SECRETS: Dict[str, str] = {}
+USERS: dict[str, str] = {}
+OTP_SECRETS: dict[str, str] = {}
 
 # Password policy constants
 PASSWORD_POLICY_MIN_LENGTH = 8
-PASSWORD_POLICY_REQUIRED_CLASSES: Dict[str, Callable[[str], bool]] = {
+PASSWORD_POLICY_REQUIRED_CLASSES: dict[str, Callable[[str], bool]] = {
     "lowercase": str.islower,
     "uppercase": str.isupper,
     "digit": str.isdigit,
@@ -36,10 +36,6 @@ PASSWORD_POLICY_BANNED: Iterable[str] = {
     "123456",
     "qwerty",
 }
-
-
-def _hash(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
 
 
 def generate_totp_secret() -> str:
@@ -72,7 +68,7 @@ async def register_user(email: str, password: str) -> str:
     if missing:
         raise InvalidCredentialsError("Password must contain " + ", ".join(missing))
 
-    USERS[email] = _hash(password)
+    USERS[email] = hash_password(password)
     secret = generate_totp_secret()
     OTP_SECRETS[email] = secret
     return secret
@@ -80,7 +76,7 @@ async def register_user(email: str, password: str) -> str:
 
 async def authenticate_user(email: str, password: str, otp_code: str) -> bool:
     stored = USERS.get(email)
-    if not stored or stored != _hash(password):
+    if not stored or not verify_password(password, stored):
         raise InvalidCredentialsError("Invalid email or password")
     await verify_totp(email, otp_code)
     return True

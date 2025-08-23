@@ -14,6 +14,7 @@ __all__ = [
     "SeedError",
     "AuthenticationError",
     "InvalidCredentialsError",
+    "PasswordHashError",
     "TokenError",
     "OTPError",
     "CacheError",
@@ -87,6 +88,13 @@ class InvalidCredentialsError(AuthenticationError):
 
     def __init__(self, message: str = "Invalid credentials") -> None:
         super().__init__(message, ErrorCode.INVALID_CREDENTIALS)
+
+
+class PasswordHashError(AuthenticationError):
+    """Raised when password hashing or verification fails."""
+
+    def __init__(self, message: str = "Password hashing failed") -> None:
+        super().__init__(message, ErrorCode.AUTHENTICATION_ERROR)
 
 
 class TokenError(AuthenticationError):
