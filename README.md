@@ -491,6 +491,94 @@ R2R_BASE_URL=http://localhost:7272
 R2R_API_KEY=your-r2r-key
 ```
 
+### External Client Configuration
+
+Critical service clients are centralised in:
+
+- `apps/api/app/deps/http.py` – shared `httpx.AsyncClient`
+- `apps/api/app/core/cache.py` – Redis cache wrapper
+- `apps/api/app/services/memory.py` – Qdrant-backed memory service
+
+When integrating new services:
+
+1. Read credentials from environment variables.
+2. Validate and sanitise user inputs.
+3. Set explicit timeouts and retry policies.
+4. Wrap failures in custom exceptions.
+
+#### HTTPX example
+
+```python
+import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential
+from apps.api.app.deps.http import HttpClientError
+from apps.api.app.core.settings import get_settings
+
+settings = get_settings()
+
+@retry(
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=2),
+    stop=stop_after_attempt(settings.http_max_retries),
+)
+async def fetch(url: str) -> dict[str, str]:
+    try:
+        async with httpx.AsyncClient(timeout=settings.http_timeout) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            return resp.json()
+    except httpx.HTTPError as exc:
+        raise HttpClientError(str(exc)) from exc
+```
+
+#### Redis example
+
+```python
+from redis.asyncio import Redis
+from tenacity import retry, stop_after_attempt, wait_exponential
+from apps.api.app.exceptions import CacheError
+from apps.api.app.core.settings import get_settings
+
+settings = get_settings()
+redis = Redis.from_url(settings.redis_url, socket_connect_timeout=5.0)
+
+@retry(
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=2),
+    stop=stop_after_attempt(3),
+)
+async def cache_get(key: str) -> str | None:
+    try:
+        return await redis.get(key)
+    except Exception as exc:  # noqa: BLE001
+        raise CacheError(f"get failed: {exc}") from exc
+```
+
+#### Qdrant example
+
+```python
+import os
+from qdrant_client import AsyncQdrantClient
+from tenacity import retry, stop_after_attempt, wait_exponential
+from apps.api.app.exceptions import ExternalServiceError
+from apps.api.app.core.settings import get_settings
+
+settings = get_settings()
+qdrant = AsyncQdrantClient(
+    settings.qdrant_url,
+    api_key=os.getenv("QDRANT_API_KEY"),
+    timeout=5.0,
+)
+
+@retry(
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=2),
+    stop=stop_after_attempt(3),
+)
+async def upsert(...) -> None:
+    try:
+        await qdrant.upsert(...)
+    except Exception as exc:  # noqa: BLE001
+        raise ExternalServiceError(f"qdrant error: {exc}") from exc
+```
+
 ## 🔐 Security & Production
 
 ### Security Features
