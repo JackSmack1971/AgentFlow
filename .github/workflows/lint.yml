@@ -41,4 +41,4 @@ jobs:
       - run: uv run black --check apps/ tests/
       - run: uv run ruff check apps/ tests/
       - run: uv run mypy apps/
-      - run: uv run pytest
+      - run: uv run pytest --cov=apps --cov-report=term-missing --cov-fail-under=80
