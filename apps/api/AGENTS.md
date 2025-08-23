@@ -1,85 +1,39 @@
-# AGENTS.md: FastAPI API Collaboration Guide
+# AGENTS.md: FastAPI Backend Guidelines
 
-<!-- Guidance for contributors working on the AgentFlow FastAPI backend. -->
+This document provides specific guidance for AI models working with the AgentFlow FastAPI backend service located in `/apps/api/`. These guidelines are derived from the FastAPI, FastAPI+Pydantic, SlowAPI middleware, and Python development rulesets.
 
-## Scope
+## 1. Project Scope & Architecture
+*   **Primary Purpose:** Production-ready FastAPI backend service for AgentFlow platform with router-based organization (auth, memory, rag, agents, health)
+*   **Core Technologies:** FastAPI 0.115.12+, Pydantic v2, asyncio, PostgreSQL, Redis, Qdrant integration
+*   **Architecture Pattern:** Router-based modular design with `/app/routers/` for endpoints, `/app/services/` for business logic, `/app/models/` for Pydantic schemas
 
-This guide covers the API service located in [`app/`](app/) and supplements the root `AGENTS.md` with backend‑specific rules.
+## 2. FastAPI Development Standards
 
-## Endpoint Structure
-
-- **Entry point:** [`app/main.py`](app/main.py) initializes the FastAPI application and mounts routers.
-- **Routers:** Place feature routers in [`app/routers/`](app/routers/). Keep paths RESTful and group by domain (auth, memory, agents, rag, health).
-- **Services:** Business logic lives in [`app/services/`](app/services/). Memory operations use Mem0 via [`services/memory.py`](app/services/memory.py).
-- **Schemas:** Define all request and response models in [`app/models/`](app/models/). Use Pydantic for strict input validation.
-
-## Authentication
-
-- Authentication routes are implemented in [`routers/auth.py`](app/routers/auth.py) with helpers in [`services/auth.py`](app/services/auth.py).
-- Load tokens and secret keys from environment variables through [`config.py`](app/config.py). **Never** hardcode credentials.
-- Use FastAPI dependencies for user context and permission checks.
-
-## Mem0 Usage
-
-- Mem0 provides multi‑level (user/agent/session) memory. Interact with it through
-  [`services/memory.py`](app/services/memory.py) and models in
-  [`memory/models.py`](app/memory/models.py).
-- **Client Setup:**
-  - Hosted mode uses `MemoryClient(api_key=os.environ["MEM0_API_KEY"])`.
-  - OSS mode builds `Memory.from_config` with `QDRANT_URL`, `QDRANT_PORT`, and
-    `POSTGRES_URL`; `NEO4J_URL` is optional for graph storage.
-- **Patterns:**
-  - `add`: `await backend.add(text, user_id=..., agent_id=..., metadata=...)`
-  - `search`: `await backend.search(query, user_id=..., agent_id=...)`
-- **Environment Variables:** `MEM0_API_KEY`, `QDRANT_URL`, `QDRANT_PORT`,
-  `POSTGRES_URL`, optional `NEO4J_URL`. Never hardcode secrets.
-- Validate incoming data before memory reads/writes and handle missing records
-  gracefully.
-
-## Security Requirements
-
-- **Input Validation:** All endpoints must use Pydantic models; reject malformed data early.
-- **Timeout & Retry:** Wrap outbound HTTP calls with `httpx.AsyncClient` and configure timeouts and retry logic.
-- **Environment Secrets:** Access API keys, database URLs, and other secrets only via environment variables exposed in [`config.py`](app/config.py).
-- **Async Error Handling:** Use `try/except` blocks around async operations and raise custom exceptions from [`exceptions.py`](app/exceptions.py) as needed.
-
----
-trigger: glob
-description: Comprehensive ruleset for FastAPI development covering setup, security, performance, testing, and deployment best practices based on v0.115.12
-globs: ["**/*.py", "**/requirements.txt", "**/Dockerfile", "**/docker-compose.yml", "**/pyproject.toml"]
----
-
-# FastAPI Rules
-
-## Project Structure and Setup
-
-- **Use proper package structure**: Organize larger applications with separate modules for routes, models, dependencies, and configuration
-- **Install with standard dependencies**: Use `pip install "fastapi[standard]"` for most use cases, or `pip install "fastapi[standard-no-fastapi-cloud-cli]"` if cloud CLI is not needed
-- **Pin dependencies properly**: Use exact versions for production (`fastapi==0.115.12`) or compatible ranges (`fastapi>=0.115.0,<0.116.0`) for development
-- **Create virtual environments**: Always use isolated Python environments (`python -m venv env`) for dependency management
-
-```python
-# Recommended project structure
-app/
-├── __init__.py
-├── main.py           # FastAPI app instance
-├── dependencies.py   # Shared dependencies
-├── config.py        # Application settings
-├── routers/         # API route modules
-│   ├── __init__.py
-│   ├── items.py
-│   └── users.py
-└── models/          # Pydantic models
+### Project Structure Requirements
+*   **MANDATORY:** Use proper package structure with separate modules:
+    ```
+    app/
     ├── __init__.py
-    └── item.py
-```
+    ├── main.py           # FastAPI app instance
+    ├── dependencies.py   # Shared dependencies
+    ├── config.py        # Application settings
+    ├── routers/         # API route modules
+    │   ├── __init__.py
+    │   ├── auth.py
+    │   ├── agents.py
+    │   ├── memory.py
+    │   ├── rag.py
+    │   └── health.py
+    ├── services/        # Business logic layer
+    ├── models/          # Pydantic schemas
+    └── exceptions.py    # Custom exception classes
+    ```
 
-## Application Configuration
-
-- **Use Pydantic Settings for configuration**: Leverage `BaseSettings` for environment-based configuration management
-- **Store secrets in environment variables**: Never hardcode sensitive data in source code
-- **Configure OpenAPI conditionally**: Use environment variables to control documentation availability in production
-- **Set up dependency injection for settings**: Use `@lru_cache()` decorator for singleton settings objects
+### Application Configuration
+*   **REQUIRED:** Use Pydantic Settings for all configuration management
+*   **CRITICAL:** Store ALL secrets in environment variables, never hardcode
+*   **REQUIRED:** Use `@lru_cache()` decorator for singleton settings objects
+*   **MANDATORY:** Configure OpenAPI conditionally for production security
 
 ```python
 from functools import lru_cache
@@ -88,281 +42,120 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
     
-    app_name: str = "FastAPI App"
-    admin_email: str
-    secret_key: str
+    app_name: str = "AgentFlow API"
     database_url: str
-    openapi_url: str = "/openapi.json"  # Set to "" in production to disable
-
-@lru_cache()
-def get_settings():
-    return Settings()
-
-app = FastAPI(openapi_url=get_settings().openapi_url)
+    redis_url: str
+    secret_key: str
+    openapi_url: str = "/openapi.json"
 ```
 
-## Security Best Practices
+### API Design Standards
+*   **MANDATORY:** Use distinct Pydantic models for request (`*Create`, `*Update`) and response (`*Response`) to prevent data leakage
+*   **REQUIRED:** Implement proper HTTP status codes (200, 201, 400, 401, 403, 404, 422, 500)
+*   **CRITICAL:** Use custom exception classes inheriting from `HTTPException`
+*   **REQUIRED:** Include comprehensive OpenAPI documentation with descriptions and examples
+*   **MANDATORY:** Implement proper CORS configuration with explicit origins
 
-- **Always use HTTPS in production**: Configure SSL/TLS certificates and disable HTTP
-- **Implement proper CORS policies**: Configure `CORSMiddleware` with specific allowed origins, not wildcard "*"
-- **Validate all user inputs**: Use Pydantic models for request validation and sanitize user-generated content
-- **Implement rate limiting**: Protect against DoS attacks with request throttling
-- **Use dependency injection for authentication**: Centralize auth logic in reusable dependencies
-- **Store passwords securely**: Always hash passwords, never store plaintext
-- **Disable debug mode in production**: Set debug=False and remove auto-reload
-- **Implement proper authorization**: Check user permissions at both endpoint and business logic levels
+### Pydantic Model Standards
+*   **REQUIRED:** Use Pydantic v2 with `extra='forbid'` for all models
+*   **MANDATORY:** Separate input vs response models for security
+*   **REQUIRED:** Use proper type annotations and validation
+*   **CRITICAL:** Never allow untyped free-text for API surfaces
 
 ```python
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel, Field
+from typing import Optional
+from datetime import datetime
 
-security = HTTPBearer()
+class AgentCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    model_config = {"extra": "forbid"}
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    # Validate JWT token and return user
-    if not validate_token(credentials.credentials):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return get_user_from_token(credentials.credentials)
-
-@app.get("/protected")
-async def protected_endpoint(user = Depends(get_current_user)):
-    return {"message": f"Hello {user.username}"}
+class AgentResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str]
+    created_at: datetime
+    updated_at: datetime
 ```
 
-## Router and Endpoint Configuration
+### Async Programming Requirements
+*   **MANDATORY:** Use async/await for ALL I/O operations
+*   **REQUIRED:** Use `httpx.AsyncClient` for all HTTP requests with proper timeout and retry logic
+*   **CRITICAL:** Implement proper error handling with try/except blocks around async operations
+*   **REQUIRED:** Use connection pooling for database and HTTP clients
 
-- **Use APIRouter for modular organization**: Group related endpoints with shared configuration
-- **Configure router-level dependencies**: Apply common dependencies like authentication at router level
-- **Set proper HTTP status codes**: Use appropriate status codes for different response scenarios
-- **Add comprehensive documentation**: Include summary, description, and response examples
-- **Handle errors gracefully**: Use HTTPException with proper status codes and error details
+### Security Requirements
+*   **CRITICAL:** All endpoints MUST use Pydantic models for input validation
+*   **MANDATORY:** Reject malformed data early with proper error messages
+*   **REQUIRED:** Access secrets only via environment variables in `config.py`
+*   **MANDATORY:** Implement JWT authentication for protected endpoints
+*   **CRITICAL:** Use non-wildcard CORS origins in production
+
+## 3. Rate Limiting with SlowAPI
+*   **REQUIRED:** Pin SlowAPI version: `slowapi==0.1.9`
+*   **MANDATORY:** Initialize Limiter with appropriate key function
+*   **CRITICAL:** Register RateLimitExceeded exception handler
 
 ```python
-from fastapi import APIRouter, Depends, HTTPException, status
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
-router = APIRouter(
-    prefix="/items",
-    tags=["items"],
-    dependencies=[Depends(get_current_user)],
-    responses={404: {"description": "Not found"}},
-)
-
-@router.get(
-    "/{item_id}",
-    summary="Get item by ID",
-    description="Retrieve a specific item using its unique identifier",
-    response_model=ItemResponse,
-)
-async def get_item(item_id: int):
-    if item_id < 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Item ID must be positive"
-        )
-    # Implementation here
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 ```
 
-## Database and ORM Integration
+## 4. Database Integration
+*   **REQUIRED:** Use async database drivers (asyncpg for PostgreSQL)
+*   **MANDATORY:** Implement proper connection pooling
+*   **CRITICAL:** Use TLS connections in production (`sslmode=verify-full`)
+*   **REQUIRED:** Implement proper transaction management
+*   **MANDATORY:** Use dependency injection for database sessions
 
-- **Use SQLAlchemy ORM**: Avoid raw SQL queries to prevent injection attacks
-- **Implement proper session management**: Use dependency injection for database sessions
-- **Handle database connections properly**: Ensure connections are closed after use
-- **Use database migrations**: Implement Alembic for schema versioning
-- **Validate database operations**: Check for foreign key constraints and business rules
+## 5. Testing Standards
+*   **MANDATORY:** Write comprehensive tests for ALL endpoints
+*   **REQUIRED:** Use pytest with pytest-asyncio for async test support
+*   **CRITICAL:** Mock external services to avoid network calls in tests
+*   **REQUIRED:** Maintain >90% test coverage
+*   **MANDATORY:** Test error conditions and edge cases
 
 ```python
-from sqlalchemy.orm import Session
-from fastapi import Depends
+import pytest
+from httpx import AsyncClient
+from app.main import app
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@app.get("/users/{user_id}")
-async def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
+@pytest.mark.asyncio
+async def test_create_agent():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post("/agents", json={"name": "Test Agent"})
+    assert response.status_code == 201
 ```
 
-## Async Programming Best Practices
+## 6. Performance Standards
+*   **REQUIRED:** API response times: simple p95 <2s, complex p95 <5s
+*   **MANDATORY:** Implement proper pagination for list endpoints
+*   **REQUIRED:** Use efficient database queries with proper indexing
+*   **CRITICAL:** Implement caching where appropriate (Redis)
 
-- **Use async/await consistently**: Define async functions for I/O operations, sync for CPU-bound tasks
-- **Avoid blocking operations in async functions**: Use asyncio-compatible libraries for database, HTTP clients
-- **Handle async exceptions properly**: Use try/catch blocks around async operations
-- **Implement background tasks correctly**: Use BackgroundTasks for fire-and-forget operations
-- **Configure async database sessions**: Use async SQLAlchemy for better performance
+## 7. Logging and Monitoring
+*   **REQUIRED:** Use structured logging with proper log levels
+*   **MANDATORY:** Log all errors with sufficient context for debugging
+*   **REQUIRED:** Implement health check endpoints (`/health`, `/ready`)
+*   **CRITICAL:** Never log sensitive information (passwords, tokens)
 
-```python
-from fastapi import BackgroundTasks
+## 8. Deployment Requirements
+*   **MANDATORY:** Use environment-based configuration
+*   **REQUIRED:** Implement graceful shutdown handlers
+*   **CRITICAL:** Use non-root users in containers
+*   **REQUIRED:** Implement proper signal handling for clean shutdowns
 
-async def send_notification(email: str, message: str):
-    # Async operation - use aiosmtplib or similar
-    await async_send_email(email, message)
-
-@app.post("/notify")
-async def create_notification(
-    notification: NotificationCreate,
-    background_tasks: BackgroundTasks
-):
-    # Add background task without waiting
-    background_tasks.add_task(send_notification, notification.email, notification.message)
-    return {"message": "Notification scheduled"}
-```
-
-## Testing Configuration
-
-- **Use TestClient for API testing**: Import from `fastapi.testclient` for synchronous tests
-- **Install required test dependencies**: Install `httpx` for TestClient and `pytest` for test framework
-- **Override dependencies for testing**: Use `app.dependency_overrides` to inject test configurations
-- **Test both success and error scenarios**: Include tests for validation errors and edge cases
-- **Use fixtures for test data**: Create reusable test data with pytest fixtures
-- **Test async endpoints properly**: Use `pytest-asyncio` for async test functions
-
-```python
-from fastapi.testclient import TestClient
-from .main import app, get_settings
-
-def test_settings_override():
-    def get_test_settings():
-        return Settings(admin_email="test@example.com")
-    
-    app.dependency_overrides[get_settings] = get_test_settings
-    
-    client = TestClient(app)
-    response = client.get("/info")
-    assert response.status_code == 200
-    assert response.json()["admin_email"] == "test@example.com"
-    
-    # Clean up
-    app.dependency_overrides.clear()
-```
-
-## Docker Deployment
-
-- **Use multi-stage builds for Poetry**: Separate dependency resolution from runtime image
-- **Configure proper CMD instruction**: Use uvicorn with correct module path and options
-- **Enable proxy headers for reverse proxies**: Add `--proxy-headers` flag when behind load balancers
-- **Set appropriate working directory**: Use `/code` as standard working directory
-- **Optimize layer caching**: Copy requirements first, then source code
-- **Use slim Python images**: Choose `python:3.11-slim` for smaller image size
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /code
-
-# Install dependencies first for better caching
-COPY ./requirements.txt /code/requirements.txt
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
-
-# Copy application code
-COPY ./app /code/app
-
-# Configure for production deployment
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--proxy-headers"]
-```
-
-## Performance Optimization
-
-- **Configure appropriate worker processes**: Use multiple Uvicorn workers for CPU-bound applications
-- **Implement response caching**: Cache expensive computations and database queries
-- **Use streaming responses for large data**: Implement StreamingResponse for large file downloads
-- **Optimize database queries**: Use eager loading and avoid N+1 query problems
-- **Configure connection pooling**: Set appropriate database connection pool sizes
-- **Monitor performance metrics**: Implement logging and monitoring for response times
-
-```python
-from fastapi.responses import StreamingResponse
-import asyncio
-
-@app.get("/large-file")
-async def download_large_file():
-    def generate_data():
-        for chunk in get_file_chunks():
-            yield chunk
-    
-    return StreamingResponse(
-        generate_data(),
-        media_type="application/octet-stream",
-        headers={"Content-Disposition": "attachment; filename=data.txt"}
-    )
-```
-
-## Known Issues and Mitigations
-
-- **Background task execution failures**: Ensure database sessions are properly scoped for background tasks
-- **Async execution bottlenecks**: Avoid blocking calls in async functions; use `asyncio.create_task()` for concurrent operations
-- **Memory leaks in long-running applications**: Properly close database connections and clear large objects
-- **CORS preflight issues**: Configure OPTIONS method handling for complex CORS scenarios
-- **File upload size limits**: Configure appropriate request size limits in your ASGI server
-- **Dependency override cleanup**: Always clear `app.dependency_overrides` after testing
-
-```python
-# Fix for background task database session issues
-from contextlib import contextmanager
-
-@contextmanager
-def get_db_for_background_task():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-def background_db_operation(item_id: int):
-    with get_db_for_background_task() as db:
-        # Perform database operations
-        item = db.query(Item).filter(Item.id == item_id).first()
-        # Process item
-```
-
-## Production Deployment Checklist
-
-- **Environment variables configured**: All secrets and config in environment, not code
-- **HTTPS enabled**: SSL/TLS certificates configured and HTTP redirects in place
-- **Debug mode disabled**: `debug=False` and no `--reload` flag
-- **Proper logging configured**: Structured logging with appropriate levels
-- **Health checks implemented**: `/health` endpoint for load balancer monitoring
-- **Rate limiting active**: API rate limiting and request size limits configured
-- **Monitoring in place**: Error tracking (Sentry) and performance monitoring
-- **Database migrations applied**: Schema is current and migrations tested
-- **Security headers configured**: CORS, CSP, and other security headers set
-- **Backup and recovery tested**: Database backups and restore procedures verified
-
-```python
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": datetime.utcnow()}
-
-# Production logging configuration
-import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-```
-
-## Version Compatibility Notes
-
-- **Current version tested**: FastAPI 0.115.12
-- **Python compatibility**: Supports Python 3.8+, recommended Python 3.11+
-- **Pydantic v2**: Use `pydantic_settings` for BaseSettings import
-- **Starlette compatibility**: Ensure compatible Starlette version for middleware
-- **Breaking changes**: Review release notes when upgrading minor versions
-- **Dependency updates**: Regular security updates for all dependencies
-
-## Testing
-
-- Add unit tests under `tests/api/` mirroring router and service structure.
-- Each new endpoint must include tests for success and error cases.
-- Validate memory operations with `pytest tests/services/test_memory.py -v`.
+## 9. Forbidden Patterns
+*   **NEVER** hardcode secrets or configuration values
+*   **NEVER** use synchronous I/O operations in async contexts
+*   **NEVER** ignore error handling in async operations
+*   **NEVER** expose internal error details to clients
+*   **NEVER** use wildcard CORS origins in production
+*   **NEVER** skip input validation on any endpoint
