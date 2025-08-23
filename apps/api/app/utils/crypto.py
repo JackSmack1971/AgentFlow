@@ -5,11 +5,11 @@ import os
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
+from ..exceptions import ConfigurationError
+
 _key_b64 = os.getenv("ENCRYPTION_KEY")
-# For development, generate ephemeral key if none provided.
-# Production deployments MUST set ENCRYPTION_KEY explicitly.
 if not _key_b64:
-    _key_b64 = base64.b64encode(os.urandom(32)).decode()
+    raise ConfigurationError("ENCRYPTION_KEY not configured")
 _KEY = base64.b64decode(_key_b64)
 
 

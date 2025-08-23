@@ -12,7 +12,7 @@ cd agentflow
 
 # 2. Configure environment
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your API keys and set ENCRYPTION_KEY
 
 # 3. Start development
 ./scripts/dev.sh

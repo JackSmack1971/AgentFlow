@@ -12,6 +12,7 @@ __all__ = [
     "HealthCheckError",
     "RBACError",
     "SeedError",
+    "ConfigurationError",
     "AuthenticationError",
     "InvalidCredentialsError",
     "PasswordHashError",
@@ -70,6 +71,13 @@ class SeedError(DomainError):
 
     def __init__(self, message: str = "Database seeding failed") -> None:
         super().__init__(message, ErrorCode.SEED_ERROR)
+
+
+class ConfigurationError(DomainError):
+    """Raised when application configuration is invalid."""
+
+    def __init__(self, message: str = "Invalid or missing configuration") -> None:
+        super().__init__(message, ErrorCode.CONFIGURATION_ERROR)
 
 
 class AuthenticationError(DomainError):
