@@ -47,6 +47,27 @@ class Settings(BaseSettings):
     http_cb_failure_threshold: int = 5
     http_cb_reset_seconds: int = 60
 
+    # Circuit Breaker Configuration
+    cb_failure_threshold: int = 3
+    cb_recovery_timeout_seconds: float = 10.0
+
+    # Service-specific timeouts for circuit breakers
+    service_timeout_mem0: float = 5.0
+    service_timeout_qdrant: float = 3.0
+    service_timeout_r2r: float = 8.0
+    service_timeout_neo4j: float = 5.0
+
+    # Security Configuration
+    environment: str = Field(default="dev", description="Environment: dev, staging, or prod")
+    security_rate_limit_per_minute: int = Field(default=100, description="Requests per minute per IP")
+    security_penetration_attempts_threshold: int = Field(default=5, description="Failed attempts before ban")
+    security_ban_duration_minutes: int = Field(default=60, description="Ban duration in minutes")
+    security_dev_ip_whitelist: list[str] = Field(
+        default=["127.0.0.1", "::1", "192.168.0.0/16"],
+        description="IP whitelist for development environment"
+    )
+    security_log_file: str = Field(default="logs/security.log", description="Security events log file")
+
 
 @lru_cache
 def get_settings() -> Settings:

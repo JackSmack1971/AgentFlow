@@ -7,7 +7,7 @@ from apps.api.app.utils.rbac import PermissionRequest, check_permission
 @pytest.mark.asyncio
 async def test_check_permission(session) -> None:
     org = Organization(name="Org")
-    user = User(email="u@example.com", hashed_password="pwd")
+    user = User(email="u@example.com", hashed_password="pwd", otp_secret="JBSWY3DPEHPK3PXP")  # Dummy OTP secret for testing
     role = Role(name="viewer")
     session.add_all([org, user, role])
     await session.flush()

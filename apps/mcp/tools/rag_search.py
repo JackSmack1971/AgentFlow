@@ -12,6 +12,7 @@ from pydantic import AnyUrl, TypeAdapter, ValidationError
 from .middleware import with_middleware
 from .registry import registry
 from .schemas import RagSearchRequest, RagSearchResponse
+from .security import validate_input
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +39,13 @@ def _build_headers() -> dict[str, str]:
 
 
 @registry.register("rag_search")
+@validate_input(query={"max_length": 1000, "required": True})
 @with_middleware("rag_search", timeout_s=8)
 async def rag_search_tool(
     ctx: Context[Any, Any, Any], request: RagSearchRequest
 ) -> RagSearchResponse:
-    """Perform RAG search via external API."""
+    """Perform RAG search via external API with security validation."""
+    # Input has already been validated and sanitized by the decorator
     api_url = _get_rag_api_url()
     headers = _build_headers()
     payload = request.model_dump()

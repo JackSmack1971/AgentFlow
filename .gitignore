@@ -1,0 +1,24 @@
+# secrets & environment
+.env
+*.env
+.env.*
+
+# caches / compiled
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# logs & local artifacts
+logs/
+*.log
+test_run_log.txt
+
+# virtualenvs & build outputs
+.venv/
+venv/
+dist/
+build/
+*.egg-info/

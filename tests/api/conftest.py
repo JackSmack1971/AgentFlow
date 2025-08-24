@@ -47,7 +47,17 @@ from apps.api.app.main import app  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def override_user() -> None:
+def override_user(request) -> None:
+    """Override authentication for non-security tests.
+
+    Security tests in tests/security/ should use real authentication
+    and should NOT have this fixture applied.
+    """
+    # Skip authentication override for security tests
+    if request.module.__name__.startswith("tests.security"):
+        yield
+        return
+
     async def fake_get_current_user() -> User:
         return User(sub="u1", roles=["user"])
 

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class MemoryScope(str, Enum):
@@ -52,13 +52,14 @@ class MemoryItem(MemoryItemBase):
     created_at: datetime
     expires_at: datetime | None = None
 
-    @validator("expires_at", always=True)
+    @field_validator("expires_at", mode="before")
     def set_expires_at(
-        cls, value: datetime | None, values: dict[str, Any]
+        cls, value: datetime | None, info
     ) -> datetime | None:
-        ttl = values.get("ttl")
-        if value is None and ttl is not None:
-            return values["created_at"] + timedelta(seconds=ttl)
+        if value is None and info.data and "ttl" in info.data:
+            ttl = info.data.get("ttl")
+            if ttl is not None and "created_at" in info.data:
+                return info.data["created_at"] + timedelta(seconds=ttl)
         return value
 
 

@@ -1,0 +1,4 @@
+# file: C:\Users\click\OneDrive\Documents\AgentFlow\apps\api\app\exceptions.py
+# hypothesis_version: 6.138.2
+
+['AgentFlowError', 'AuthenticationError', 'CacheError', 'ConfigurationError', 'HealthCheckError', 'Invalid credentials', 'Invalid rating', 'InvalidRatingError', 'MemoryServiceError', 'MetricsError', 'OTPError', 'PasswordHashError', 'R2RServiceError', 'RBACError', 'SeedError', 'Token error', 'TokenError']

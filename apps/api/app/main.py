@@ -5,12 +5,13 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from .config import validate_settings
+from .config import get_settings
 from .deps.http import shutdown_http_client, startup_http_client
 from .middleware.audit import AuditMiddleware
 from .middleware.body_size import BodySizeLimitMiddleware
 from .middleware.correlation import CorrelationIdMiddleware
 from .middleware.errors import register_error_handlers
+from .middleware.security import SecurityMiddleware
 from .observability.tracing import setup_tracing
 from .rate_limiter import limiter
 from .routers import agents, auth, cache_examples, health, memory, rag, workflow
@@ -40,16 +41,21 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Respon
         raise RateLimitError("Rate limit handler failed") from err
 
 
-settings = validate_settings()
-setup_logging(settings.log_level)
-setup_tracing(settings.app_name)
-app = FastAPI(title=settings.app_name, openapi_url=settings.openapi_url)
+settings = get_settings()
+setup_logging(settings.app.log_level)
+setup_tracing(settings.app.name)
+app = FastAPI(title=settings.app.name, openapi_url=settings.app.openapi_url)
 register_error_handlers(app)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
+# Security middleware - must be first for comprehensive protection
+app.add_middleware(SecurityMiddleware, settings=settings)
+
+# Other middleware
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(BodySizeLimitMiddleware, max_body_size=settings.max_body_size)
+app.add_middleware(BodySizeLimitMiddleware, max_body_size=settings.app.max_body_size)
 app.add_middleware(AuditMiddleware)
 app.add_event_handler("startup", startup_http_client)
 app.add_event_handler("shutdown", shutdown_http_client)

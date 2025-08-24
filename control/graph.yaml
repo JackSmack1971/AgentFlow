@@ -1,0 +1,51 @@
+version: 1
+orchestrator: sparc-orchestrator
+circuit_breakers:
+  - name: excessive-iteration
+    guard: "iterations(task_id) > 3"
+    action: "halt->sparc-orchestrator"
+  - name: unmet-criteria
+    guard: "last.handoff.success_criteria_met == false"
+    action: "reroute->sparc-qa-analyst"
+nodes:
+  spec: { agent: sparc-specification-writer, intents: [plan, design] }
+  research: { agent: data-researcher, intents: [research] }
+  factcheck: { agent: rapid-fact-checker, intents: [verify] }
+  arch: { agent: sparc-architect, intents: [design] }
+  sec-arch: { agent: sparc-security-architect, intents: [design, verify] }
+  pseudo: { agent: sparc-pseudocode-designer, intents: [design] }
+  impl: { agent: sparc-code-implementer, intents: [implement] }
+  tdd: { agent: sparc-tdd-engineer, intents: [test] }
+  qa: { agent: sparc-qa-analyst, intents: [verify, test] }
+  adversary: { agent: sparc-autonomous-adversary, intents: [harden, verify] }
+  reviewer: { agent: security-reviewer, intents: [verify] }
+  integrate: { agent: sparc-integrator, intents: [integrate, validate] }
+  platform: { agent: sparc-platform-engineer, intents: [design, implement] }
+  sre: { agent: sparc-sre-engineer, intents: [design, validate] }
+  ux: { agent: sparc-ux-architect, intents: [design, verify] }
+
+edges:
+  - from: spec     ; to: research ; guard: "spec.complete && spec.ac_defined"
+  - from: research ; to: factcheck; guard: "research.claims >= 1"
+  - from: factcheck; to: arch     ; guard: "factcheck.pass_rate >= 0.9"
+  - from: arch     ; to: sec-arch ; guard: "arch.interfaces_defined"
+  - from: sec-arch ; to: pseudo   ; guard: "sec-arch.threat_model_ready"
+  - from: pseudo   ; to: tdd      ; guard: "pseudo.functions_defined"
+  - from: tdd      ; to: impl     ; guard: "tests.red == true"
+  - from: impl     ; to: qa       ; guard: "tests.green == true"
+  - from: qa       ; to: adversary; guard: "qa.acceptance_met == true"
+  - from: adversary; to: reviewer ; guard: "adversary.risks_mitigated >= 0.95"
+  - from: reviewer ; to: integrate; guard: "reviewer.critical_0 == true"
+  - from: integrate; to: platform ; guard: "integration.pass == true"
+  - from: platform ; to: sre      ; guard: "platform.pipeline_ready == true"
+  - from: sre      ; to: orchestrator ; guard: "sre.slo_defined && sre.runbooks_ready"
+
+timeouts:
+  default_ttl: "P2D"
+  node_overrides:
+    research: "P3D"
+    adversary: "P3D"
+
+fallbacks:
+  - on: "guard_fail"
+    action: "return->sparc-orchestrator"

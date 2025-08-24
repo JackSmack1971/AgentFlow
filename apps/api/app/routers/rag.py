@@ -4,6 +4,7 @@ from ..dependencies import User, require_roles
 from ..exceptions import R2RServiceError
 from ..models.rag import DocumentUploadResponse, RAGSearchResponse
 from ..models.schemas import RAGQuery
+from ..services.circuit_breaker import ServiceUnavailableError
 from ..services.rag import MAX_FILE_SIZE, rag, rag_service
 
 router = APIRouter()
@@ -23,6 +24,8 @@ async def run_rag(
             limit=payload.limit,
         )
         return RAGSearchResponse.model_validate(result)
+    except ServiceUnavailableError as exc:  # pragma: no cover - circuit breaker open
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except R2RServiceError as exc:  # pragma: no cover - error path
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -62,6 +65,8 @@ async def upload_document(
             bytes(content), filename=filename, content_type=content_type
         )
         return DocumentUploadResponse.model_validate(result)
+    except ServiceUnavailableError as exc:  # pragma: no cover - circuit breaker open
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except R2RServiceError as exc:  # pragma: no cover - error path

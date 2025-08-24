@@ -26,6 +26,7 @@ from ..memory.models import (
     MemoryItemUpdate,
     MemoryScope,
 )
+from .circuit_breaker import circuit_breaker_manager, get_service_timeout
 
 try:  # pragma: no cover - optional dependency
     from mem0 import Memory, MemoryClient  # type: ignore
@@ -100,6 +101,36 @@ async def _with_retry(
             return await asyncio.wait_for(
                 asyncio.to_thread(func, *args, **kwargs), timeout
             )
+
+
+async def _with_circuit_breaker(
+    func: Any,
+    *args: Any,
+    service_name: str,
+    retries: int,
+    timeout: float | None = None,
+    **kwargs: Any,
+) -> Any:
+    """Execute a function with circuit breaker protection and retry logic."""
+
+    if timeout is None:
+        timeout = get_service_timeout(service_name)
+
+    async def _execute_with_retry() -> Any:
+        """Inner function that handles retry logic."""
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(retries + 1),
+            wait=wait_exponential(multiplier=0.1),
+            reraise=True,
+        ):
+            with attempt:
+                return await asyncio.wait_for(
+                    asyncio.to_thread(func, *args, **kwargs), timeout
+                )
+
+    return await circuit_breaker_manager.call_with_breaker(
+        service_name, _execute_with_retry
+    )
 
 
 class MemoryService:
@@ -191,11 +222,12 @@ class MemoryService:
 
         if self.backend and hasattr(self.backend, "update"):
             try:
-                await _with_retry(
+                await _with_circuit_breaker(
                     self.backend.update,
                     item_id,
                     text=item.text,
                     metadata=item.metadata,
+                    service_name="mem0",
                     retries=retries,
                     timeout=timeout,
                 )
@@ -207,9 +239,10 @@ class MemoryService:
 
         if self.backend and hasattr(self.backend, "delete"):
             try:
-                await _with_retry(
+                await _with_circuit_breaker(
                     self.backend.delete,
                     item_id,
+                    service_name="mem0",
                     retries=retries,
                     timeout=timeout,
                 )
@@ -221,10 +254,11 @@ class MemoryService:
     ) -> list[str]:
         """Search backend and return matching ids."""
 
-        res = await _with_retry(
+        res = await _with_circuit_breaker(
             self.backend.search,
             query,
             limit=limit,
+            service_name="mem0",
             retries=retries,
             timeout=timeout,
         )
@@ -262,12 +296,13 @@ class MemoryService:
         if not self.backend:
             return str(uuid.uuid4()), []
         try:
-            res = await _with_retry(
+            res = await _with_circuit_breaker(
                 self.backend.add,
                 data.text,
                 user_id=data.user_id,
                 agent_id=data.agent_id,
                 metadata=meta,
+                service_name="mem0",
                 retries=retries,
                 timeout=timeout,
             )

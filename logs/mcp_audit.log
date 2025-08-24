@@ -1,0 +1,6 @@
+{'timestamp': '2025-08-24T04:24:58.324361', 'user': <MagicMock name='mock.user_info.get()' id='1999537828064'>, 'tool': 'rag_search_tool', 'args': {}, 'status': 'started'}
+{'timestamp': '2025-08-24T04:24:58.324361', 'user': <MagicMock name='mock.user_info.get()' id='1999537828064'>, 'tool': 'rag_search_tool', 'args': {}, 'status': 'failed', 'error': 'RAG_API_URL not set'}
+{'timestamp': '2025-08-24T04:24:58.440590', 'user': 'test@example.com', 'tool': 'rag_search_tool', 'args': {}, 'status': 'started'}
+{'timestamp': '2025-08-24T04:24:58.440590', 'user': 'test@example.com', 'tool': 'rag_search_tool', 'args': {}, 'status': 'completed'}
+{'timestamp': '2025-08-24T04:24:58.454499', 'user': 'test@example.com', 'tool': 'rag_search_tool', 'args': {}, 'status': 'started'}
+{'timestamp': '2025-08-24T04:24:58.454499', 'user': 'test@example.com', 'tool': 'rag_search_tool', 'args': {}, 'status': 'failed', 'error': 'RAG_API_URL not set'}

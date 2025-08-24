@@ -9,6 +9,7 @@ from typing import Any
 from httpx import AsyncClient, HTTPError
 
 from ..exceptions import R2RServiceError
+from .circuit_breaker import circuit_breaker_manager, ServiceUnavailableError
 
 R2R_BASE = os.getenv("R2R_BASE_URL", "http://localhost:7272")
 R2R_API_KEY = os.getenv("R2R_API_KEY", "")
@@ -55,20 +56,31 @@ class RAGService:
     async def _post_with_retry(
         self, endpoint: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
-        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
-        last_exc: HTTPError | None = None
-        for attempt in range(3):
-            try:
-                async with AsyncClient(timeout=10) as client:
-                    resp = await client.post(
-                        f"{self.base_url}{endpoint}", json=payload, headers=headers
-                    )
-                    resp.raise_for_status()
-                    return resp.json()
-            except HTTPError as exc:  # noqa: BLE001
-                last_exc = exc
-                await asyncio.sleep(2**attempt)
-        raise R2RServiceError(f"R2R request to {endpoint} failed") from last_exc
+        """Execute R2R request with circuit breaker protection and retry logic."""
+
+        async def _execute_request() -> dict[str, Any]:
+            """Inner function that makes the actual HTTP request with retry."""
+            headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+            last_exc: HTTPError | None = None
+            for attempt in range(3):
+                try:
+                    async with AsyncClient(timeout=10) as client:
+                        resp = await client.post(
+                            f"{self.base_url}{endpoint}", json=payload, headers=headers
+                        )
+                        resp.raise_for_status()
+                        return resp.json()
+                except HTTPError as exc:  # noqa: BLE001
+                    last_exc = exc
+                    await asyncio.sleep(2**attempt)
+            raise R2RServiceError(f"R2R request to {endpoint} failed") from last_exc
+
+        try:
+            return await circuit_breaker_manager.call_with_breaker(
+                "r2r", _execute_request
+            )
+        except ServiceUnavailableError as exc:
+            raise R2RServiceError(str(exc)) from exc
 
     async def upload_document(
         self,

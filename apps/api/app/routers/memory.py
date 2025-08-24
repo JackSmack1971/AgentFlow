@@ -22,6 +22,7 @@ from ..memory.models import (
     MemoryItemUpdate,
     MemoryScope,
 )
+from ..services.circuit_breaker import ServiceUnavailableError
 from ..services.memory import memory_service
 
 router = APIRouter()
@@ -37,6 +38,8 @@ async def create_memory_item(
         data.user_id = user.sub
     try:
         return await memory_service.add_item(data)
+    except ServiceUnavailableError as exc:  # pragma: no cover - circuit breaker open
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except MemoryServiceError as exc:  # pragma: no cover - rare
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -61,6 +64,8 @@ async def get_memory_item(
 ) -> MemoryItem:
     try:
         return await memory_service.get_item(item_id)
+    except ServiceUnavailableError as exc:  # pragma: no cover - circuit breaker open
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except MemoryNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -73,6 +78,8 @@ async def update_memory_item(
 ) -> MemoryItem:
     try:
         return await memory_service.update_item(item_id, data)
+    except ServiceUnavailableError as exc:  # pragma: no cover - circuit breaker open
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except MemoryNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -89,6 +96,8 @@ async def delete_memory_item(
     try:
         await memory_service.delete_item(item_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except ServiceUnavailableError as exc:  # pragma: no cover - circuit breaker open
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except MemoryNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -127,9 +136,12 @@ async def search_memory_items(
     tags: list[str] | None = Query(None),
     user: User = Depends(require_roles(["user"])),
 ) -> list[MemoryItem]:
-    return await memory_service.search_items(
-        q, offset=offset, limit=limit, scope=scope, tags=tags
-    )
+    try:
+        return await memory_service.search_items(
+            q, offset=offset, limit=limit, scope=scope, tags=tags
+        )
+    except ServiceUnavailableError as exc:  # pragma: no cover - circuit breaker open
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.get("/stream", summary="Stream memory change events")

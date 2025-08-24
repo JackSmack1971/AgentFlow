@@ -10,6 +10,10 @@ from functools import wraps
 from typing import Any
 from collections.abc import Awaitable, Callable
 
+from mcp.server.fastmcp import Context
+
+from .security import audit_log, require_auth, require_https
+
 logger = logging.getLogger(__name__)
 SECRET_PATTERN = re.compile(r"[A-Za-z0-9]{32,}")
 
@@ -60,19 +64,34 @@ def scrub_log(text: str) -> str:
 
 
 def with_middleware(
-    name: str, timeout_s: float, limiter: RateLimiter | None = None
+    name: str,
+    timeout_s: float,
+    limiter: RateLimiter | None = None,
+    require_authentication: bool = True,
+    enable_audit: bool = True
 ) -> Callable[[Callable[..., Awaitable[Any]]], Callable[..., Awaitable[Any]]]:
-    """Decorator adding timeout, rate limiting, and logging."""
+    """Decorator adding security, timeout, rate limiting, and logging."""
     limiter = limiter or RateLimiter()
 
     def decorator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
-        @wraps(func)
-        async def wrapper(ctx: Any, *args: Any, **kwargs: Any) -> Any:
+        # Apply security decorators
+        secured_func = func
+
+        # Apply audit logging if enabled
+        if enable_audit:
+            secured_func = audit_log()(secured_func)
+
+        # Apply authentication if required
+        if require_authentication:
+            secured_func = require_auth(secured_func)
+
+        @wraps(secured_func)
+        async def wrapper(ctx: Context[Any, Any, Any], *args: Any, **kwargs: Any) -> Any:
             await limiter.check(name)
             logger.info(scrub_log(f"start {name}"))
             try:
                 result = await asyncio.wait_for(
-                    func(ctx, *args, **kwargs), timeout=timeout_s
+                    secured_func(ctx, *args, **kwargs), timeout=timeout_s
                 )
                 logger.info(scrub_log(f"end {name}"))
                 return result

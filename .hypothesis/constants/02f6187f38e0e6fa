@@ -1,0 +1,4 @@
+# file: C:\Users\click\OneDrive\Documents\AgentFlow\apps\api\app\utils\rbac.py
+# hypothesis_version: 6.138.2
+
+['*', 'admin', 'agents', 'member', 'read', 'viewer', 'write']
