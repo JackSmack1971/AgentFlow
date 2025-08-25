@@ -6,10 +6,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from apps.api.app.db.models import User
-from apps.api.app.exceptions import InvalidCredentialsError
-from apps.api.app.services.auth import AuthService
+from apps.api.app.exceptions import InvalidCredentialsError, TokenError
+from apps.api.app.services.auth import (
+    AuthService,
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    settings,
+)
 
 os.environ.setdefault("SECRET_KEY", "test")
+os.environ.setdefault("JWT_SECRET_KEY", "test_jwt_secret_key_32_chars_min_length")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
@@ -48,3 +55,14 @@ async def test_authenticate_user_invalid_password(session: AsyncSession) -> None
 
     with pytest.raises(InvalidCredentialsError):
         await service.authenticate_user(email, "WrongPass1!", otp_code)
+
+
+@pytest.mark.asyncio
+async def test_token_helpers_missing_jwt_secret_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "jwt_secret_key", "")
+    with pytest.raises(TokenError):
+        await create_access_token("user@example.com")
+    with pytest.raises(TokenError):
+        await create_refresh_token("user@example.com")
+    with pytest.raises(TokenError):
+        await decode_token("token")
