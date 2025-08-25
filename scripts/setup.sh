@@ -21,8 +21,8 @@ check_dependency "docker-compose"
 
 # Check Python version
 python_version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-if [[ $(echo "$python_version >= 3.10" | bc -l) -eq 0 ]]; then
-    echo "❌ Python 3.10+ required, found $python_version"
+if [[ $(echo "$python_version >= 3.11" | bc -l) -eq 0 ]]; then
+    echo "❌ Python 3.11+ required, found $python_version"
     exit 1
 fi
 echo "✅ Python $python_version"

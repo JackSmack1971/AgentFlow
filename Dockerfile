@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG PYTHON_VERSION=3.10.17
+ARG PYTHON_VERSION=3.11.8
 
 FROM python:${PYTHON_VERSION}-slim AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -1,11 +1,39 @@
 $ pip list --outdated
-Package       Version  Latest  Type
-------------- -------- ------- -----
-fastapi       0.115.12 0.116.1 wheel
-protobuf      5.29.5   6.32.0  wheel
-pydantic_core 2.33.2   2.39.0  wheel
-pyright       1.1.403  1.1.404 wheel
-ruff          0.12.7   0.12.9  wheel
-starlette     0.46.2   0.47.2  wheel
-tiktoken      0.8.0    0.11.0  wheel
+Package      Version Latest Type
+------------ ------- ------ -----
+argcomplete  3.1.4   3.6.2  wheel
+blinker      1.7.0   1.9.0  wheel
+breezy       3.3.5   3.3.12 wheel
+click        8.1.6   8.2.1  wheel
+configobj    5.0.8   5.0.9  wheel
+cryptography 41.0.7  45.0.6 wheel
+dbus-python  1.3.2   1.4.0  sdist
+dulwich      0.21.6  0.24.1 wheel
+fastbencode  0.2     0.3.5  wheel
+httplib2     0.20.4  0.22.0 wheel
+launchpadlib 1.11.0  2.1.0  wheel
+lazr.uri     1.0.6   1.0.7  wheel
+merge3       0.0.8   0.0.15 wheel
+oauthlib     3.2.2   3.3.1  wheel
+packaging    24.0    25.0   wheel
+patiencediff 0.2.13  0.2.15 wheel
+pip          24.0    25.2   wheel
+pipx         1.4.3   1.7.1  wheel
+platformdirs 4.2.0   4.3.8  wheel
+Pygments     2.17.2  2.19.2 wheel
+PyGObject    3.48.2  3.52.3 sdist
+PyJWT        2.7.0   2.10.1 wheel
+pyparsing    3.1.1   3.2.3  wheel
+PyYAML       6.0.1   6.0.2  wheel
+setuptools   68.1.2  80.9.0 wheel
+six          1.16.0  1.17.0 wheel
+tzlocal      5.2     5.3.1  wheel
+urllib3      2.0.7   2.5.0  wheel
+userpath     1.9.1   1.9.2  wheel
+wadllib      1.3.6   2.0.0  wheel
+wheel        0.42.0  0.45.1 wheel
+/usr/lib/python3/dist-packages/pip/_internal/metadata/importlib/_envs.py:111: DeprecationWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html
+  from pip._vendor.pkg_resources import find_distributions
+/usr/lib/python3/dist-packages/pip/_vendor/packaging/version.py:111: DeprecationWarning: Creating a LegacyVersion has been deprecated and will be removed in the next major release
+  warnings.warn(
 

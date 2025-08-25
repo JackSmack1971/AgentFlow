@@ -4,13 +4,13 @@
 name = "agentflow"
 version = "0.1.0"
 description = "AgentFlow MVP scaffold"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "alembic==1.16.4",
     "cryptography==45.0.6",
     "email-validator==2.2.0",
     "fastapi==0.115.12",
-    "fastapi-guard==0.5.0",
+    "fastapi-guard==3.0.2",
     "httpx==0.28.1",
     "langgraph>=0.1.0",
     "langgraph-checkpoint-postgres>=0.1.0",
@@ -84,11 +84,11 @@ dev = [
 
 [tool.black]
 line-length = 88
-target-version = ['py310']
+target-version = ['py311']
 include = '\.pyi?$'
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 88
 
 [tool.ruff.lint]
@@ -107,7 +107,7 @@ ignore = [
 ]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 check_untyped_defs = true
 disallow_any_generics = true
 disallow_incomplete_defs = true

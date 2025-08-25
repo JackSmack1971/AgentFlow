@@ -193,10 +193,10 @@ rate_limit_config = RateLimitConfig(
 
 #### Medium Severity Issues (2)
 1. **fastapi-guard vulnerability** (ID: 77996, 78312)
-   - **Current Version**: 0.5.0
+   - **Current Version**: 3.0.2
    - **Secure Version**: 3.0.2
    - **Impact**: Security library vulnerabilities
-   - **Status**: Requires update
+   - **Status**: Updated
 
 2. **Starlette vulnerability** (ID: 78279)
    - **Current Version**: 0.46.2
@@ -249,7 +249,7 @@ jobs:
 
 ### Immediate Actions (Priority: High)
 1. **Update Dependencies**:
-   - Upgrade `fastapi-guard` from 0.5.0 to 3.0.2
+   - `fastapi-guard` upgraded to 3.0.2
    - Upgrade `starlette` from 0.46.2 to 0.47.2
 
 2. **Configuration Hardening**:
