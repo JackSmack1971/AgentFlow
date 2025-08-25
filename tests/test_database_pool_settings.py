@@ -12,6 +12,9 @@ def baseline_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/test")
     monkeypatch.setenv("REDIS_URL", "redis://localhost")
     monkeypatch.setenv("QDRANT_URL", "http://localhost:6333")
+    monkeypatch.setenv("JWT_SECRET_KEY", "test_jwt_secret_key_32_chars_min_length")
+    monkeypatch.setenv("ENCRYPTION_KEY", "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=")
+    monkeypatch.setenv("FERNET_KEY", "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=")
 
 
 @pytest.mark.parametrize(
