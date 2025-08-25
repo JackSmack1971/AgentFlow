@@ -4,7 +4,7 @@
 name = "agentflow"
 version = "0.1.0"
 description = "AgentFlow MVP scaffold"
-requires-python = ">=3.11"
+requires-python = ">=3.11.0"
 dependencies = [
     "alembic==1.16.4",
     "cryptography==45.0.6",

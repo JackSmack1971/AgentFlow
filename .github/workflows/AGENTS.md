@@ -15,7 +15,7 @@ This document provides essential context for AI models interacting with the Agen
 
 ## 2. Core Technologies & Stack
 
-*   **Languages:** Python 3.10+, TypeScript 5.x, JavaScript ES2023
+*   **Languages:** Python 3.11+, TypeScript 5.x, JavaScript ES2023
 *   **Frameworks & Runtimes:** 
     - Backend: FastAPI 0.115.12+, Pydantic AI, LangGraph (orchestration), Mem0 (memory), R2R (RAG), AG2 (multi-agent)
     - Frontend: Next.js 14+ with App Router, React 18+, Tailwind CSS, Biome (linting/formatting)
@@ -93,7 +93,7 @@ This document provides essential context for AI models interacting with the Agen
 ## 6. Development & Testing Workflow
 
 *   **Local Development Environment:**
-    1. Install Python 3.10+ and uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+    1. Install Python 3.11+ and uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
     2. Install Node.js 20+ and npm for frontend development
     3. Start services: `docker compose -f docker-compose.dev.yml up -d`
     4. Backend setup: `cd apps/api && uv install && uvicorn app.main:app --reload`

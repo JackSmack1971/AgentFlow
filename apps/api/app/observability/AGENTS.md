@@ -15,7 +15,7 @@ This document provides essential context for AI models interacting with the obse
 
 ## 2. Core Technologies & Stack
 
-* **Languages:** Python 3.10+ (primary), with OpenTelemetry SDK integration
+* **Languages:** Python 3.11+ (primary), with OpenTelemetry SDK integration
 * **Frameworks & Runtimes:** 
   - FastAPI 0.115.12+ with async/await patterns
   - OpenTelemetry Python SDK (latest stable) for distributed tracing
