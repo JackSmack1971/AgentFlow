@@ -39,6 +39,8 @@ from apps.api.app.services.security_monitoring import (
     MonitoringConfig
 )
 
+from apps.api.app.utils.rsa import generate_rsa_key_pair
+
 # Security-specific test settings
 os.environ.setdefault("DATABASE_URL", "postgresql://test_user:test_pass@localhost:5432/test_security_db")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")  # Use separate Redis DB for security tests
@@ -248,6 +250,16 @@ class SecurityTestClient(TestClient):
 def security_client(client):
     """Provide SecurityTestClient for security testing."""
     return SecurityTestClient(app)
+
+
+@pytest_asyncio.fixture(scope="session")
+async def rsa_keys(tmp_path_factory):
+    """Generate RSA key pair for JWT tests."""
+    key_dir = tmp_path_factory.mktemp("keys")
+    private_path = key_dir / "jwt_private.pem"
+    public_path = key_dir / "jwt_public.pem"
+    await generate_rsa_key_pair(str(private_path), str(public_path))
+    return str(private_path), str(public_path)
 
 
 # Redis fixtures for security testing

@@ -24,16 +24,14 @@ class TestSecureJWTHandler:
     """Test enhanced JWT handler with encryption and security features."""
 
     @pytest.fixture
-    def secure_jwt_handler(self, redis_client):
+    def secure_jwt_handler(self, redis_client, rsa_keys):
         """Create SecureJWTHandler instance for testing."""
         from apps.api.app.services.secure_jwt import SecureJWTHandler
 
         return SecureJWTHandler(
-            secret_key="test_secret_key_32_chars_min!!!",
-            algorithm="HS256",
             audience="agentflow-api",
             issuer="agentflow-auth",
-            redis_client=redis_client
+            redis_client=redis_client,
         )
 
     @pytest.mark.asyncio
@@ -56,10 +54,10 @@ class TestSecureJWTHandler:
         # Decode and verify payload
         payload = jwt.decode(
             token,
-            secure_jwt_handler.secret_key,
+            secure_jwt_handler.public_key,
             algorithms=[secure_jwt_handler.algorithm],
             audience=secure_jwt_handler.audience,
-            issuer=secure_jwt_handler.issuer
+            issuer=secure_jwt_handler.issuer,
         )
 
         # Verify comprehensive security claims
@@ -126,16 +124,16 @@ class TestSecureJWTHandler:
         # Decode token and modify audience
         payload = jwt.decode(
             token,
-            secure_jwt_handler.secret_key,
-            algorithms=[secure_jwt_handler.algorithm]
+            secure_jwt_handler.public_key,
+            algorithms=[secure_jwt_handler.algorithm],
         )
         payload["aud"] = "invalid-audience"
 
         # Re-encode with invalid audience
         invalid_token = jwt.encode(
             payload,
-            secure_jwt_handler.secret_key,
-            algorithm=secure_jwt_handler.algorithm
+            secure_jwt_handler.private_key,
+            algorithm=secure_jwt_handler.algorithm,
         )
 
         with pytest.raises(TokenError) as exc_info:
@@ -154,16 +152,16 @@ class TestSecureJWTHandler:
         # Decode token and modify issuer
         payload = jwt.decode(
             token,
-            secure_jwt_handler.secret_key,
-            algorithms=[secure_jwt_handler.algorithm]
+            secure_jwt_handler.public_key,
+            algorithms=[secure_jwt_handler.algorithm],
         )
         payload["iss"] = "invalid-issuer"
 
         # Re-encode with invalid issuer
         invalid_token = jwt.encode(
             payload,
-            secure_jwt_handler.secret_key,
-            algorithm=secure_jwt_handler.algorithm
+            secure_jwt_handler.private_key,
+            algorithm=secure_jwt_handler.algorithm,
         )
 
         with pytest.raises(TokenError) as exc_info:
@@ -182,8 +180,8 @@ class TestSecureJWTHandler:
         # Decode to get JTI
         payload = jwt.decode(
             token,
-            secure_jwt_handler.secret_key,
-            algorithms=[secure_jwt_handler.algorithm]
+            secure_jwt_handler.public_key,
+            algorithms=[secure_jwt_handler.algorithm],
         )
         jti = payload["jti"]
 
@@ -207,16 +205,16 @@ class TestSecureJWTHandler:
         # Decode and modify roles to invalid format
         payload = jwt.decode(
             token,
-            secure_jwt_handler.secret_key,
-            algorithms=[secure_jwt_handler.algorithm]
+            secure_jwt_handler.public_key,
+            algorithms=[secure_jwt_handler.algorithm],
         )
         payload["roles"] = "invalid_roles_string"  # Should be list
 
         # Re-encode with invalid roles
         invalid_token = jwt.encode(
             payload,
-            secure_jwt_handler.secret_key,
-            algorithm=secure_jwt_handler.algorithm
+            secure_jwt_handler.private_key,
+            algorithm=secure_jwt_handler.algorithm,
         )
 
         with pytest.raises(TokenError) as exc_info:
@@ -235,16 +233,16 @@ class TestSecureJWTHandler:
         # Decode and modify version
         payload = jwt.decode(
             token,
-            secure_jwt_handler.secret_key,
-            algorithms=[secure_jwt_handler.algorithm]
+            secure_jwt_handler.public_key,
+            algorithms=[secure_jwt_handler.algorithm],
         )
         payload["token_version"] = "2.0"  # Invalid version
 
         # Re-encode with invalid version
         invalid_token = jwt.encode(
             payload,
-            secure_jwt_handler.secret_key,
-            algorithm=secure_jwt_handler.algorithm
+            secure_jwt_handler.private_key,
+            algorithm=secure_jwt_handler.algorithm,
         )
 
         with pytest.raises(TokenError) as exc_info:
@@ -263,16 +261,16 @@ class TestSecureJWTHandler:
         # Decode and modify expiration to be too far in future
         payload = jwt.decode(
             token,
-            secure_jwt_handler.secret_key,
-            algorithms=[secure_jwt_handler.algorithm]
+            secure_jwt_handler.public_key,
+            algorithms=[secure_jwt_handler.algorithm],
         )
         payload["exp"] = payload["iat"] + 7200  # 2 hours in future
 
         # Re-encode with invalid expiration
         invalid_token = jwt.encode(
             payload,
-            secure_jwt_handler.secret_key,
-            algorithm=secure_jwt_handler.algorithm
+            secure_jwt_handler.private_key,
+            algorithm=secure_jwt_handler.algorithm,
         )
 
         with pytest.raises(TokenError) as exc_info:
@@ -291,8 +289,8 @@ class TestSecureJWTHandler:
         # Decode to get JTI
         payload = jwt.decode(
             token,
-            secure_jwt_handler.secret_key,
-            algorithms=[secure_jwt_handler.algorithm]
+            secure_jwt_handler.public_key,
+            algorithms=[secure_jwt_handler.algorithm],
         )
         jti = payload["jti"]
 
@@ -311,6 +309,22 @@ class TestSecureJWTHandler:
         assert "rapid_validation" in result_payload.get("security_flags", [])
 
     @pytest.mark.asyncio
+    async def test_rotate_tokens(self, secure_jwt_handler):
+        """Test that refresh token rotation issues new tokens."""
+        subject = "rotate@example.com"
+        refresh = await secure_jwt_handler.create_secure_token(subject, expiration_minutes=10080)
+        rotated = await secure_jwt_handler.rotate_tokens(refresh)
+        assert rotated["refresh_token"] != refresh
+        payload = jwt.decode(
+            rotated["refresh_token"],
+            secure_jwt_handler.public_key,
+            algorithms=[secure_jwt_handler.algorithm],
+            audience=secure_jwt_handler.audience,
+            issuer=secure_jwt_handler.issuer,
+        )
+        assert payload["sub"] == subject
+
+    @pytest.mark.asyncio
     async def test_token_metadata_storage(self, secure_jwt_handler, redis_client):
         """Test that token metadata is properly stored."""
         subject = "test@example.com"
@@ -323,8 +337,8 @@ class TestSecureJWTHandler:
         # Decode to get JTI
         payload = jwt.decode(
             token,
-            secure_jwt_handler.secret_key,
-            algorithms=[secure_jwt_handler.algorithm]
+            secure_jwt_handler.public_key,
+            algorithms=[secure_jwt_handler.algorithm],
         )
         jti = payload["jti"]
 
