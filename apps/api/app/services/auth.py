@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .. import config
+from ..core.settings import get_settings
 from ..db.models import User
 from ..exceptions import InvalidCredentialsError, OTPError, TokenError
 from ..utils.password import hash_password_async, verify_password_async
@@ -24,7 +24,14 @@ revoke_refresh_token = token_store.revoke_refresh_token
 store_refresh_token = token_store.store_refresh_token
 verify_refresh_token = token_store.verify_refresh_token
 
-settings = config.get_settings()
+settings = get_settings()
+
+
+def _get_jwt_secret() -> str:
+    key = settings.jwt_secret_key
+    if not key:
+        raise TokenError("JWT secret key not configured")
+    return key
 
 # Password policy constants
 PASSWORD_POLICY_MIN_LENGTH = 8
@@ -111,6 +118,7 @@ class AuthService:
 
 
 async def create_access_token(subject: str) -> str:
+    key = _get_jwt_secret()
     expire = datetime.utcnow() + timedelta(minutes=settings.access_token_ttl_minutes)
     try:
         payload = {
@@ -121,12 +129,13 @@ async def create_access_token(subject: str) -> str:
             "iss": "agentflow-auth",     # ADD ISSUER
             "iat": datetime.utcnow()     # ADD ISSUED AT
         }
-        return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+        return jwt.encode(payload, key, algorithm="HS256")
     except jwt.PyJWTError as exc:  # pragma: no cover - library failure
         raise TokenError("Could not create access token") from exc
 
 
 async def create_refresh_token(subject: str) -> str:
+    key = _get_jwt_secret()
     expire = datetime.utcnow() + timedelta(minutes=settings.refresh_token_ttl_minutes)
     try:
         payload = {
@@ -137,16 +146,17 @@ async def create_refresh_token(subject: str) -> str:
             "iss": "agentflow-auth",     # ADD ISSUER
             "iat": datetime.utcnow()     # ADD ISSUED AT
         }
-        return jwt.encode(payload, settings.secret_key, algorithm="HS256")
+        return jwt.encode(payload, key, algorithm="HS256")
     except jwt.PyJWTError as exc:  # pragma: no cover - library failure
         raise TokenError("Could not create refresh token") from exc
 
 
 async def decode_token(token: str) -> str:
+    key = _get_jwt_secret()
     try:
         payload = jwt.decode(
             token,
-            settings.secret_key,
+            key,
             algorithms=["HS256"],
             audience="agentflow-api",     # VALIDATE AUDIENCE
             issuer="agentflow-auth"       # VALIDATE ISSUER
