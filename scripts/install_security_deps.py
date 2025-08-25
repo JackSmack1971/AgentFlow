@@ -1,99 +1,103 @@
 #!/usr/bin/env python3
 """Install security middleware dependencies."""
 
+import asyncio
+import logging
+import os
+import re
 import subprocess
 import sys
-import os
 
-def install_fastapi_guard():
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+class DependencyInstallationError(Exception):
+    """Raised when a dependency cannot be installed."""
+
+
+async def _run(cmd: list[str], timeout: int) -> subprocess.CompletedProcess:
+    """Run a subprocess command with timeout."""
+    return await asyncio.wait_for(
+        asyncio.to_thread(
+            subprocess.run, cmd, capture_output=True, text=True, check=True
+        ),
+        timeout=timeout,
+    )
+
+
+async def install_fastapi_guard() -> None:
     """Install fastapi-guard dependency."""
-    print("🔧 Installing fastapi-guard dependency...")
+    version = os.getenv("FASTAPI_GUARD_VERSION", "4.0.3")
+    if not re.fullmatch(r"\d+(?:\.\d+)*", version):
+        raise DependencyInstallationError("Invalid FASTAPI_GUARD_VERSION format")
 
-    try:
-        # Install fastapi-guard
-        result = subprocess.run([
-            sys.executable, "-m", "pip", "install", "fastapi-guard==3.0.2"
-        ], capture_output=True, text=True, check=True)
+    cmd = [sys.executable, "-m", "pip", "install", f"fastapi-guard=={version}"]
+    for attempt in range(1, 4):
+        try:
+            result = await _run(cmd, 300)
+            logger.info("fastapi-guard installation output: %s", result.stdout.strip())
+            await _run([sys.executable, "-c", "import fastapi_guard"], 60)
+            logger.info("fastapi-guard import check passed")
+            return
+        except Exception as exc:  # pragma: no cover - generic for safety
+            logger.error("Attempt %d failed: %s", attempt, exc)
+            if attempt == 3:
+                raise DependencyInstallationError(
+                    f"Failed to install fastapi-guard=={version}"
+                ) from exc
+            await asyncio.sleep(1)
 
-        print("✅ fastapi-guard installed successfully")
-        print(result.stdout)
 
-        # Verify installation
-        result = subprocess.run([
-            sys.executable, "-c", "import fastapi_guard; print('fastapi-guard version:', fastapi_guard.__version__)"
-        ], capture_output=True, text=True, check=True)
-
-        print("✅ fastapi-guard import successful")
-        print(result.stdout)
-
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to install fastapi-guard: {e}")
-        print("Error output:", e.stderr)
-        sys.exit(1)
-
-def check_redis_connection():
+async def check_redis_connection() -> bool:
     """Check Redis connection for security middleware."""
-    print("🔍 Checking Redis connection...")
-
+    logger.info("Checking Redis connection...")
     try:
-        # Add the app directory to the path
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'apps', 'api'))
-
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "apps", "api"))
         from app.core.settings import get_settings
-        import redis
-
+        from redis.asyncio import Redis
         settings = get_settings()
-        print(f"📋 Redis URL: {settings.redis_url}")
-
-        # Test Redis connection
-        redis_client = redis.Redis.from_url(settings.redis_url)
-        redis_client.ping()
-
-        print("✅ Redis connection successful")
-
-        # Test security key operations
-        test_key = "security:test:connection"
-        redis_client.setex(test_key, 30, "test_value")
-        value = redis_client.get(test_key)
-
+        logger.info("Redis URL: %s", settings.redis_url)
+        client = Redis.from_url(settings.redis_url)
+        for attempt in range(1, 3):
+            try:
+                await asyncio.wait_for(client.ping(), timeout=5); break
+            except Exception:
+                if attempt == 2: raise
+                await asyncio.sleep(1)
+        await client.setex("security:test:connection", 30, "test_value")
+        value = await client.get("security:test:connection")
         if value and value.decode() == "test_value":
-            print("✅ Redis security key operations working")
-            redis_client.delete(test_key)
+            await client.delete("security:test:connection")
+            logger.info("Redis security key operations working")
         else:
-            print("❌ Redis security key operations failed")
-
+            logger.error("Redis security key operations failed")
+        await client.close()
         return True
-
-    except Exception as e:
-        print(f"❌ Redis connection failed: {e}")
-        print("Please ensure Redis is running and REDIS_URL is configured correctly")
+    except Exception as exc:  # pragma: no cover - fallback
+        logger.error("Redis connection failed: %s", exc)
+        logger.error("Ensure Redis is running and REDIS_URL is configured correctly")
         return False
 
-def main():
+
+async def main() -> None:
     """Main installation and verification."""
-    print("🚀 AgentFlow Security Middleware Setup")
-    print("=" * 50)
+    logger.info("AgentFlow Security Middleware Setup")
+    try:
+        await install_fastapi_guard()
+    except DependencyInstallationError as exc:
+        logger.error("Dependency installation failed: %s", exc)
+        return
 
-    # Install dependencies
-    install_fastapi_guard()
-
-    print()
-
-    # Check Redis connection
-    redis_ok = check_redis_connection()
-
-    print()
-
-    if redis_ok:
-        print("🎉 Security middleware setup completed successfully!")
-        print("\n📋 Next steps:")
-        print("   1. Start the API server: cd apps/api && uvicorn app.main:app --reload")
-        print("   2. Test security features: python scripts/test_security_middleware.py")
-        print("   3. Monitor security logs: tail -f logs/security.log")
-        print("   4. Check Redis security data: python scripts/check_redis_security.py")
+    if await check_redis_connection():
+        logger.info("Security middleware setup completed successfully!")
     else:
-        print("⚠️  Setup completed with warnings!")
-        print("Please fix Redis connection before using security middleware.")
+        logger.warning(
+            "Setup completed with warnings. Fix Redis connection before use."
+        )
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
