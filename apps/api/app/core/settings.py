@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +13,15 @@ class Settings(BaseSettings):
 
     app_name: str = "AgentFlow API"
     secret_key: str
+    jwt_secret_key: str = Field(
+        ..., env="JWT_SECRET_KEY", min_length=32, description="Primary JWT secret key"
+    )
+    encryption_key: str = Field(
+        ..., env="ENCRYPTION_KEY", description="AES-256 encryption key (base64 encoded)"
+    )
+    fernet_key: str = Field(
+        ..., env="FERNET_KEY", description="Fernet encryption key for sensitive data"
+    )
     openapi_url: str = "/openapi.json"
     database_url: str
     database_pool_size: int = Field(
@@ -67,6 +76,32 @@ class Settings(BaseSettings):
         description="IP whitelist for development environment"
     )
     security_log_file: str = Field(default="logs/security.log", description="Security events log file")
+
+    @field_validator("encryption_key")
+    @classmethod
+    def _validate_encryption_key(cls, v: str) -> str:
+        import base64
+
+        try:
+            decoded = base64.b64decode(v)
+            if len(decoded) != 32:
+                raise ValueError("Encryption key must be 32 bytes (base64 encoded)")
+        except Exception as e:
+            raise ValueError(f"Invalid encryption key format: {e}")
+        return v
+
+    @field_validator("fernet_key")
+    @classmethod
+    def _validate_fernet_key(cls, v: str) -> str:
+        import base64
+
+        try:
+            decoded = base64.b64decode(v)
+            if len(decoded) != 32:
+                raise ValueError("Fernet key must be 32 bytes (base64 encoded)")
+        except Exception as e:
+            raise ValueError(f"Invalid Fernet key format: {e}")
+        return v
 
 
 @lru_cache

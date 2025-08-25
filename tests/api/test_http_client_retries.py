@@ -14,6 +14,9 @@ async def test_http_client_retries(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("REDIS_URL", "redis://localhost")
     monkeypatch.setenv("QDRANT_URL", "http://localhost:6333")
     monkeypatch.setenv("HTTP_MAX_RETRIES", "3")
+    monkeypatch.setenv("JWT_SECRET_KEY", "test_jwt_secret_key_32_chars_min_length")
+    monkeypatch.setenv("ENCRYPTION_KEY", "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=")
+    monkeypatch.setenv("FERNET_KEY", "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=")
     config.get_settings.cache_clear()
     await http.startup_http_client()
 

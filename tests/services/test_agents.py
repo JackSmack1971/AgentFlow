@@ -4,6 +4,13 @@ from types import SimpleNamespace
 import pytest
 
 os.environ.setdefault("OPENAI_API_KEY", "test")
+os.environ.setdefault("SECRET_KEY", "test_secret_key_32_chars_min_length")
+os.environ.setdefault("DATABASE_URL", "postgresql://localhost/test")
+os.environ.setdefault("REDIS_URL", "redis://localhost")
+os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
+os.environ.setdefault("JWT_SECRET_KEY", "test_jwt_secret_key_32_chars_min_length")
+os.environ.setdefault("ENCRYPTION_KEY", "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=")
+os.environ.setdefault("FERNET_KEY", "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=")
 
 from apps.api.app.config import get_settings  # noqa: E402
 from apps.api.app.exceptions import AgentFlowError  # noqa: E402

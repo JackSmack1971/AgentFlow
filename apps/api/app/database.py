@@ -44,6 +44,13 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         raise AgentFlowError("Database session error", ErrorCode.DOMAIN_ERROR) from exc
 
 
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Backward-compatible alias for database session access."""
+
+    async for session in get_session():
+        yield session
+
+
 def get_pool_status() -> dict[str, int]:
     """Return current database pool metrics."""
 

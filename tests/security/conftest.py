@@ -18,6 +18,26 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+# Security-specific test settings (must be set before importing app modules)
+os.environ["DATABASE_URL"] = "postgresql+asyncpg://test_user:test_pass@localhost:5432/test_security_db"
+os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")  # Use separate Redis DB for security tests
+os.environ.setdefault("SECRET_KEY", "test_security_secret_key_32_chars_min")
+os.environ.setdefault("JWT_SECRET_KEY", "test_jwt_secret_key_32_chars_min_length")
+os.environ.setdefault("FERNET_KEY", "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=")
+os.environ.setdefault("ENVIRONMENT", "test")
+
+# Additional required environment variables for security tests
+os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
+os.environ.setdefault("OPENAI_API_KEY", "test_key")
+os.environ.setdefault("ENCRYPTION_KEY", "YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=")
+os.environ.setdefault("APP_NAME", "AgentFlow Security Test")
+os.environ.setdefault("LOG_LEVEL", "INFO")
+os.environ.pop("DEBUG", None)
+os.environ.pop("DEVELOPMENT_MODE", None)
+os.environ.pop("API_PREFIX", None)
+os.environ.pop("RELOAD_ON_CHANGE", None)
+os.environ.pop("TEST_DATABASE_URL", None)
+
 # Add the project root to the Python path
 sys.path.append(str(pathlib.Path(__file__).resolve().parents[2]))
 
@@ -40,24 +60,6 @@ from apps.api.app.services.security_monitoring import (
 )
 
 from apps.api.app.utils.rsa import generate_rsa_key_pair
-
-# Security-specific test settings
-os.environ.setdefault("DATABASE_URL", "postgresql://test_user:test_pass@localhost:5432/test_security_db")
-os.environ.setdefault("REDIS_URL", "redis://localhost:6379/1")  # Use separate Redis DB for security tests
-os.environ.setdefault("SECRET_KEY", "test_security_secret_key_32_chars_min")
-os.environ.setdefault("FERNET_KEY", "test_fernet_key_32_chars_1234567890")
-os.environ.setdefault("ENVIRONMENT", "test")
-
-# Additional required environment variables for security tests
-os.environ.setdefault("QDRANT_URL", "http://localhost:6333")
-os.environ.setdefault("OPENAI_API_KEY", "test_key")
-os.environ.setdefault("ENCRYPTION_KEY", "dGVzdF9lbmNyeXB0aW9uX2tleV90aGF0X2lzXzMyX2NoYXJz")
-os.environ.setdefault("APP_NAME", "AgentFlow Security Test")
-os.environ.setdefault("DEBUG", "true")
-os.environ.setdefault("LOG_LEVEL", "INFO")
-os.environ.setdefault("DEVELOPMENT_MODE", "true")
-os.environ.setdefault("API_PREFIX", "/api/v1")
-os.environ.setdefault("RELOAD_ON_CHANGE", "false")
 
 settings = get_settings()
 
