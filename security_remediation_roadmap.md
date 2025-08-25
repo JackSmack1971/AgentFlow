@@ -17,7 +17,7 @@ This roadmap outlines prioritized actions to address the security findings from 
 **Risk**: Known vulnerabilities in dependencies
 
 **Actions**:
-- [ ] Update `fastapi-guard` from 0.5.0 to 3.0.2
+- [x] Update `fastapi-guard` to 3.0.2
 - [ ] Update `starlette` from 0.46.2 to 0.47.2
 - [ ] Run full test suite after updates
 - [ ] Update dependency vulnerability baseline

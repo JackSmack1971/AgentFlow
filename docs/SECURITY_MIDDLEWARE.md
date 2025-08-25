@@ -96,11 +96,11 @@ security_log_file: str = Field(default="logs/security.log", description="Securit
 
 1. **Install fastapi-guard**:
    ```bash
-   pip install fastapi-guard==0.5.0
+   pip install fastapi-guard==3.0.2
    ```
 
 2. **Update dependencies** (already done):
-   - Added `fastapi-guard==0.5.0` to `pyproject.toml`
+   - Added `fastapi-guard==3.0.2` to `pyproject.toml`
 
 3. **Configure environment**:
    - Set `ENVIRONMENT` variable

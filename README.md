@@ -3,7 +3,7 @@
 > **Unified AI Agent Development Platform** - Reduce agent development time by 60-80% through standardized interfaces, visual workflow orchestration, and enterprise-grade infrastructure.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python Version](https://img.shields.io/badge/python-3.10+-green.svg)
+![Python Version](https://img.shields.io/badge/python-3.11+-green.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5.x-blue.svg)
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 ![Test Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen.svg)
@@ -42,7 +42,7 @@ AgentFlow is a comprehensive AI agent development platform that unifies six lead
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115.12-009688.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)
 ![React](https://img.shields.io/badge/React-18-61DAFB.svg)
-![Python](https://img.shields.io/badge/Python-3.10.17-3776AB.svg)
+![Python](https://img.shields.io/badge/Python-3.11.8-3776AB.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.x-336791.svg)
 ![Redis](https://img.shields.io/badge/Redis-7.x-DC382D.svg)
@@ -67,7 +67,7 @@ flowchart TB
     end
     
     subgraph "Core Services"
-        API[Backend API Service<br/>Python 3.10.17]
+        API[Backend API Service<br/>Python 3.11.8]
         MCP[MCP Server<br/>Tool Integration]
         AGENT[Agent Orchestration<br/>LangGraph + Pydantic AI]
         MEMORY[Memory Service<br/>Mem0 Integration]
@@ -266,7 +266,7 @@ flowchart TB
 
 Ensure you have the following installed on your system:
 
-- **Python 3.10+** (pinned to 3.10.17 for consistency)
+- **Python 3.11+** (pinned to 3.11.8 for consistency)
 - **Node.js 20+** for frontend development
 - **Docker & Docker Compose** for containerized services
 - **uv package manager** for Python dependency management
@@ -793,9 +793,9 @@ AgentFlow/
 #### Prerequisites Installation
 
 ```bash
-# Install Python 3.10+ (recommended: pyenv)
-pyenv install 3.10.17
-pyenv local 3.10.17
+# Install Python 3.11+ (recommended: pyenv)
+pyenv install 3.11.8
+pyenv local 3.11.8
 
 # Install uv package manager
 curl -LsSf https://astral.sh/uv/install.sh | sh

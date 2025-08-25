@@ -12,7 +12,7 @@ def install_fastapi_guard():
     try:
         # Install fastapi-guard
         result = subprocess.run([
-            sys.executable, "-m", "pip", "install", "fastapi-guard==0.5.0"
+            sys.executable, "-m", "pip", "install", "fastapi-guard==3.0.2"
         ], capture_output=True, text=True, check=True)
 
         print("✅ fastapi-guard installed successfully")
