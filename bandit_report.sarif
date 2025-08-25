@@ -1,0 +1,133 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Bandit",
+          "version": "1.8.6",
+          "informationUri": "https://bandit.readthedocs.io/",
+          "rules": []
+        }
+      },
+      "results": [
+        {
+          "ruleId": "B104",
+          "level": "medium",
+          "message": {
+            "text": "Possible binding to all interfaces."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "apps/api\\app\\config\\environments.py"
+                },
+                "region": {
+                  "startLine": 70
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": 605,
+            "confidence": "MEDIUM"
+          }
+        },
+        {
+          "ruleId": "B104",
+          "level": "medium",
+          "message": {
+            "text": "Possible binding to all interfaces."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "apps/api\\app\\config\\environments.py"
+                },
+                "region": {
+                  "startLine": 112
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": 605,
+            "confidence": "MEDIUM"
+          }
+        },
+        {
+          "ruleId": "B104",
+          "level": "medium",
+          "message": {
+            "text": "Possible binding to all interfaces."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "apps/api\\app\\config\\settings.py"
+                },
+                "region": {
+                  "startLine": 280
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": 605,
+            "confidence": "MEDIUM"
+          }
+        },
+        {
+          "ruleId": "B110",
+          "level": "low",
+          "message": {
+            "text": "Try, Except, Pass detected."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "apps/api\\app\\services\\secure_jwt.py"
+                },
+                "region": {
+                  "startLine": 265
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": 703,
+            "confidence": "HIGH"
+          }
+        },
+        {
+          "ruleId": "B110",
+          "level": "low",
+          "message": {
+            "text": "Try, Except, Pass detected."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "apps/api\\app\\services\\secure_jwt.py"
+                },
+                "region": {
+                  "startLine": 276
+                }
+              }
+            }
+          ],
+          "properties": {
+            "cwe": 703,
+            "confidence": "HIGH"
+          }
+        }
+      ]
+    }
+  ]
+}

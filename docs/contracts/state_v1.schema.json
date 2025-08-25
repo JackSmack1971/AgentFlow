@@ -1,0 +1,39 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SPARC Orchestration State",
+  "type": "object",
+  "required": ["schema", "project_id", "updated_at", "nodes"],
+  "properties": {
+    "schema": { "const": "STATE/V1" },
+    "version": { "type": "string", "default": "1.0.0" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "current": { "type": ["string", "null"] },
+    "nodes": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z0-9_-]+$": {
+          "type": "object",
+          "required": ["mode", "status"],
+          "properties": {
+            "mode": { "type": "string" },
+            "status": { "type": "string", "enum": ["pending","ready","running","blocked","done","failed","skipped"] },
+            "handoff_id": { "type": ["string","null"] },
+            "artifacts": { "type": "array", "items": { "type": "string" }, "default": [] },
+            "depends_on": { "type": "array", "items": { "type": "string" }, "default": [] },
+            "attempts": { "type": "integer", "minimum": 0, "default": 0 },
+            "started_at": { "type": "string", "format": "date-time" },
+            "finished_at": { "type": "string", "format": "date-time" },
+            "notes": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "active": { "type": "array", "items": { "type": "string" } },
+    "completed": { "type": "array", "items": { "type": "string" } },
+    "failed": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

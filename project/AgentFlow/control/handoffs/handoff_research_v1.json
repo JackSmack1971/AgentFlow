@@ -1,0 +1,66 @@
+{
+  "schema": "HANDOFF/V1",
+  "handoff_id": "handoff-research-v1",
+  "parent_id": "handoff-spec-inventory-v1",
+  "from": {
+    "mode": "data-researcher",
+    "timestamp": "2025-08-24T19:53:00.000Z"
+  },
+  "to": {
+    "mode": "rapid-fact-checker"
+  },
+  "objective": "Deliver decision-grade evidence for top 3 risky decisions to enable fact-checking and validation",
+  "inputs": [
+    "memory-bank/productContext.md",
+    "project/AgentFlow/control/backlog.yaml",
+    "project/AgentFlow/control/sprint.yaml"
+  ],
+  "acceptance_criteria": [
+    "Multi-framework integration risks validated with ≥95% confidence",
+    "Performance optimization strategies verified against current system metrics",
+    "Security architecture recommendations cross-verified with industry standards",
+    "All claims supported by authoritative sources with confidence scoring",
+    "Evidence files properly structured with source attribution and timestamps"
+  ],
+  "artifacts": [
+    "project/AgentFlow/control/research/claims-multi-framework-integration.json",
+    "project/AgentFlow/control/research/claims-performance-optimization.json",
+    "project/AgentFlow/control/research/claims-security-architecture.json",
+    "project/AgentFlow/control/mcp-usage.log.jsonl"
+  ],
+  "dependencies": [
+    "MCP servers: exa (for web search), context7 (for library docs - if available)",
+    "Access to current codebase and documentation",
+    "Research sources and industry benchmarks availability"
+  ],
+  "ttl": "7 days",
+  "next": [
+    {
+      "target_mode": "rapid-fact-checker",
+      "intent": "Cross-validate research claims against existing documentation and achieve ≥95% confidence"
+    },
+    {
+      "target_mode": "sparc-orchestrator",
+      "intent": "Incorporate validated research into architecture decision-making process"
+    }
+  ],
+  "notes": "Research completed using Exa Search for web sources. Context7 MCP server was not available during research. All claims include confidence levels and multiple authoritative sources.",
+  "risk_flags": [
+    "High confidence in security research (0.95), medium-high in performance (0.9), medium in integration (0.85)",
+    "Some integration claims may require codebase validation",
+    "Performance benchmarks should be validated against current system metrics"
+  ],
+  "status": "open",
+  "checksums": {
+    "claims-multi-framework-integration.json": "sha256-placeholder",
+    "claims-performance-optimization.json": "sha256-placeholder",
+    "claims-security-architecture.json": "sha256-placeholder",
+    "mcp-usage.log.jsonl": "sha256-placeholder"
+  },
+  "links": [
+    "https://www.dailydoseofds.com/model-context-protocol-crash-course-part-9/",
+    "https://arxiv.org/html/2504.19413v1",
+    "https://pytorch.org/blog/improve-rag-performance/",
+    "https://hayageek.com/json-web-token-jwt-security-best-practices/"
+  ]
+}

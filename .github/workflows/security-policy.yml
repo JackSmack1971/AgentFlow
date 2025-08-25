@@ -1,0 +1,354 @@
+name: Security Policy Enforcement
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      policy_type:
+        description: 'Policy to enforce'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - dependencies
+          - containers
+          - infrastructure
+          - compliance
+
+env:
+  POLICY_TYPE: ${{ github.event.inputs.policy_type || 'all' }}
+
+jobs:
+  dependency-policy:
+    name: Dependency Security Policy
+    runs-on: ubuntu-latest
+    if: env.POLICY_TYPE == 'all' || env.POLICY_TYPE == 'dependencies'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Check for outdated dependencies
+        run: |
+          uv sync --frozen --extra dev
+          uv run pip list --outdated --format=json > outdated.json
+
+          # Check for critical outdated packages
+          critical_outdated=$(jq '[.[] | select(.latest_version != .version)] | length' outdated.json)
+
+          if [ "$critical_outdated" -gt 10 ]; then
+            echo "⚠️  Too many outdated dependencies: $critical_outdated"
+            echo "Consider updating dependencies to reduce security risks"
+          fi
+
+      - name: Check dependency licenses
+        run: |
+          uv run pip-licenses --format=json > licenses.json
+
+          # Check for problematic licenses
+          problematic=$(jq '[.[] | select(.License | contains("GPL", "AGPL"))] | length' licenses.json)
+
+          if [ "$problematic" -gt 0 ]; then
+            echo "⚠️  Found $problematic packages with restrictive licenses"
+            jq '[.[] | select(.License | contains("GPL", "AGPL"))]' licenses.json
+          fi
+
+      - name: Security audit with Safety
+        run: |
+          uv run safety check --json > safety-audit.json || true
+
+          # Parse safety results
+          vulnerabilities=$(jq '.vulnerabilities | length' safety-audit.json)
+          high_severity=$(jq '[.vulnerabilities[] | select(.severity == "high")] | length' safety-audit.json)
+
+          if [ "$high_severity" -gt 0 ]; then
+            echo "🚨 Found $high_severity high-severity vulnerabilities!"
+            exit 1
+          fi
+
+      - name: Update dependency dashboard
+        run: |
+          echo "# Dependency Security Report" > dependency-report.md
+          echo "## Generated on $(date)" >> dependency-report.md
+          echo "" >> dependency-report.md
+          echo "### Outdated Dependencies" >> dependency-report.md
+          jq -r '.[] | "- \(.name): \(.version) → \(.latest_version)"' outdated.json >> dependency-report.md
+          echo "" >> dependency-report.md
+          echo "### License Compliance" >> dependency-report.md
+          jq -r '.[] | "- \(.Name): \(.License)"' licenses.json >> dependency-report.md
+
+  container-policy:
+    name: Container Security Policy
+    runs-on: ubuntu-latest
+    if: env.POLICY_TYPE == 'all' || env.POLICY_TYPE == 'containers'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t agentflow:latest .
+
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          scan-ref: 'agentflow:latest'
+          format: 'json'
+          output: 'trivy-results.json'
+          severity: 'HIGH,CRITICAL'
+
+      - name: Analyze container vulnerabilities
+        run: |
+          if [ -f trivy-results.json ]; then
+            critical_count=$(jq '[.Results[]? as $r | $r.Vulnerabilities[]? as $v | select($v.Severity == "CRITICAL")] | length' trivy-results.json)
+            high_count=$(jq '[.Results[]? as $r | $r.Vulnerabilities[]? as $v | select($v.Severity == "HIGH")] | length' trivy-results.json)
+
+            echo "Critical vulnerabilities: $critical_count"
+            echo "High vulnerabilities: $high_count"
+
+            if [ "$critical_count" -gt 0 ]; then
+              echo "🚨 Critical container vulnerabilities found!"
+              jq '[.Results[]? as $r | $r.Vulnerabilities[]? as $v | select($v.Severity == "CRITICAL") | {VulnerabilityID: $v.VulnerabilityID, Severity: $v.Severity, Description: $v.Description}]' trivy-results.json
+              exit 1
+            fi
+          fi
+
+      - name: Check Docker security best practices
+        run: |
+          echo "Checking Docker security configurations..."
+
+          # Check if running as root
+          if grep -q "USER root" Dockerfile; then
+            echo "⚠️  Warning: Container runs as root user"
+          fi
+
+          # Check for security-related configurations
+          if ! grep -q "security" docker-compose.yml; then
+            echo "ℹ️  Consider adding security configurations to docker-compose.yml"
+          fi
+
+  infrastructure-policy:
+    name: Infrastructure Security Policy
+    runs-on: ubuntu-latest
+    if: env.POLICY_TYPE == 'all' || env.POLICY_TYPE == 'infrastructure'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose security
+        run: |
+          echo "Validating Docker Compose security..."
+
+          # Check for exposed ports
+          exposed_ports=$(grep -c "ports:" docker-compose.yml || echo "0")
+          if [ "$exposed_ports" -gt 3 ]; then
+            echo "⚠️  Many ports exposed: $exposed_ports"
+          fi
+
+          # Check for non-root users
+          non_root_users=$(grep -c "user:" docker-compose.yml || echo "0")
+          if [ "$non_root_users" -lt 3 ]; then
+            echo "⚠️  Few services configured with non-root users: $non_root_users"
+          fi
+
+          # Check for secrets usage
+          if ! grep -q "secrets:" docker-compose.yml; then
+            echo "⚠️  No Docker secrets configured"
+          fi
+
+      - name: Check for security misconfigurations
+        run: |
+          echo "Checking for common security misconfigurations..."
+
+          # Check for debug mode in production
+          if grep -r "DEBUG.*=.*True" . --include="*.py" --include="*.env*" --include="*.yml" --include="*.yaml"; then
+            echo "🚨 Debug mode enabled in configuration files!"
+          fi
+
+          # Check for hardcoded secrets
+          if grep -r "password\|secret\|key" . --include="*.py" --include="*.js" --include="*.ts" | grep -v "test\|example\|template"; then
+            echo "⚠️  Potential hardcoded secrets found"
+          fi
+
+      - name: Validate environment configurations
+        run: |
+          echo "Validating environment configurations..."
+
+          # Check if .env files are in .gitignore
+          if ! grep -q ".env" .gitignore; then
+            echo "⚠️  .env files not in .gitignore"
+          fi
+
+          # Check for sensitive files
+          sensitive_files=$(find . -name "*.key" -o -name "*.pem" -o -name "id_rsa*" | wc -l)
+          if [ "$sensitive_files" -gt 0 ]; then
+            echo "🚨 Found $sensitive_files sensitive files in repository"
+          fi
+
+  compliance-policy:
+    name: Compliance Policy Enforcement
+    runs-on: ubuntu-latest
+    if: env.POLICY_TYPE == 'all' || env.POLICY_TYPE == 'compliance'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check required security files
+        run: |
+          echo "Checking for required security documentation..."
+
+          required_files=(
+            "SECURITY.md"
+            "README.md"
+            ".github/workflows/security-gates.yml"
+            "docker-compose.yml"
+            "Dockerfile"
+          )
+
+          missing_files=()
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              missing_files+=("$file")
+            fi
+          done
+
+          if [ ${#missing_files[@]} -gt 0 ]; then
+            echo "❌ Missing required security files:"
+            printf '%s\n' "${missing_files[@]}"
+            exit 1
+          else
+            echo "✅ All required security files present"
+          fi
+
+      - name: Validate security configurations
+        run: |
+          echo "Validating security configurations..."
+
+          # Check JWT configuration
+          if ! grep -q "JWT_SECRET_KEY" .github/workflows/*.yml; then
+            echo "⚠️  JWT secret configuration not found in workflows"
+          fi
+
+          # Check rate limiting
+          if ! grep -q "rate.limit" apps/api/app/**/*.py; then
+            echo "⚠️  Rate limiting not configured in application"
+          fi
+
+          # Check security middleware
+          if ! grep -q "security.*middleware" apps/api/app/**/*.py; then
+            echo "⚠️  Security middleware not configured"
+          fi
+
+      - name: OWASP Top 10 Compliance Check
+        run: |
+          echo "Checking OWASP Top 10 compliance..."
+
+          # A01:2021 - Broken Access Control
+          if ! grep -q "RBAC\|role.*based" apps/api/app/**/*.py; then
+            echo "⚠️  A01:2021 - No RBAC implementation found"
+          fi
+
+          # A02:2021 - Cryptographic Failures
+          if ! grep -q "encrypt\|cryptography" apps/api/app/**/*.py; then
+            echo "⚠️  A02:2021 - No encryption implementation found"
+          fi
+
+          # A03:2021 - Injection
+          if ! grep -q "sanitiz\|escape" apps/api/app/**/*.py; then
+            echo "⚠️  A03:2021 - No input sanitization found"
+          fi
+
+          # A05:2021 - Security Misconfiguration
+          if ! grep -q "security.*header" apps/api/app/**/*.py; then
+            echo "⚠️  A05:2021 - No security headers configured"
+          fi
+
+  generate-report:
+    name: Generate Security Policy Report
+    runs-on: ubuntu-latest
+    needs: [dependency-policy, container-policy, infrastructure-policy, compliance-policy]
+    if: always()
+
+    steps:
+      - name: Generate comprehensive report
+        run: |
+          echo "# Security Policy Enforcement Report" > security-policy-report.md
+          echo "## Generated on $(date)" >> security-policy-report.md
+          echo "" >> security-policy-report.md
+
+          echo "## Policy Results" >> security-policy-report.md
+          echo "" >> security-policy-report.md
+
+          # Check job results
+          if [ "${{ needs.dependency-policy.result }}" == "success" ]; then
+            echo "✅ Dependency Policy: PASSED" >> security-policy-report.md
+          else
+            echo "❌ Dependency Policy: FAILED" >> security-policy-report.md
+          fi
+
+          if [ "${{ needs.container-policy.result }}" == "success" ]; then
+            echo "✅ Container Policy: PASSED" >> security-policy-report.md
+          else
+            echo "❌ Container Policy: FAILED" >> security-policy-report.md
+          fi
+
+          if [ "${{ needs.infrastructure-policy.result }}" == "success" ]; then
+            echo "✅ Infrastructure Policy: PASSED" >> security-policy-report.md
+          else
+            echo "❌ Infrastructure Policy: FAILED" >> security-policy-report.md
+          fi
+
+          if [ "${{ needs.compliance-policy.result }}" == "success" ]; then
+            echo "✅ Compliance Policy: PASSED" >> security-policy-report.md
+          else
+            echo "❌ Compliance Policy: FAILED" >> security-policy-report.md
+          fi
+
+          echo "" >> security-policy-report.md
+          echo "## Recommendations" >> security-policy-report.md
+          echo "" >> security-policy-report.md
+          echo "1. Review failed policies and address issues" >> security-policy-report.md
+          echo "2. Update dependencies regularly" >> security-policy-report.md
+          echo "3. Implement security best practices" >> security-policy-report.md
+          echo "4. Monitor security advisories" >> security-policy-report.md
+
+      - name: Upload security report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-policy-report
+          path: security-policy-report.md
+
+      - name: Send notification
+        if: failure()
+        run: |
+          echo "Security policy violations detected!"
+          # Send notification to security team
+          # This could integrate with Slack, email, or other notification systems
+
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Clean up artifacts
+        run: |
+          echo "Cleaning up temporary files..."
+          rm -f *.json *.md || true

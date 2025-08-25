@@ -1,0 +1,69 @@
+schemaVersion: "2.0.0"
+
+commandTests:
+  - name: "python-version"
+    command: "python"
+    args: ["--version"]
+    expectedOutput: ["Python 3\\."]
+
+  - name: "uv-available"
+    command: "uv"
+    args: ["--version"]
+    expectedOutput: ["uv"]
+
+  - name: "non-root-user"
+    command: "id"
+    args: ["-u"]
+    expectedOutput: ["1000"]
+
+  - name: "health-endpoint"
+    command: "curl"
+    args: ["-f", "http://localhost:8000/health"]
+    expectedExitCode: 0
+
+fileExistenceTests:
+  - name: "app-directory"
+    path: "/app"
+    shouldExist: true
+
+  - name: "python-app"
+    path: "/app/apps/api/app/main.py"
+    shouldExist: true
+
+  - name: "requirements"
+    path: "/app/requirements.txt"
+    shouldExist: true
+
+  - name: "uv-lock"
+    path: "/app/uv.lock"
+    shouldExist: true
+
+metadataTest:
+  envVars:
+    - key: "PYTHONPATH"
+      value: "/app"
+    - key: "ENVIRONMENT"
+      value: ".*"
+
+fileContentTests:
+  - name: "security-limits"
+    path: "/etc/security/limits.conf"
+    expectedContents: [".*"]
+
+  - name: "no-suid-binaries"
+    path: "/usr/bin"
+    excludedContents: ["-rws"]
+
+licenseTests:
+  - name: "check-licenses"
+    debian: false
+    scanPath: "/usr/local/lib/python*/site-packages"
+    allowedLicenses:
+      - "MIT"
+      - "Apache-2.0"
+      - "BSD-3-Clause"
+      - "ISC"
+      - "Python-2.0"
+    deniedLicenses:
+      - "GPL-3.0"
+      - "AGPL-3.0"

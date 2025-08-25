@@ -1,0 +1,33 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Backlog",
+  "type": "object",
+  "required": ["epics"],
+  "properties": {
+    "epics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id","name","stories"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "stories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id","title"],
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "priority": { "type": "string", "enum": ["Low","Medium","High","Critical"] },
+                "acceptance": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

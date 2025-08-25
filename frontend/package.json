@@ -14,12 +14,16 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
+    "@xyflow/react": "^12.8.4",
+    "@xyflow/system": "^0.0.68",
     "lucide-react": "latest",
     "next": "latest",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.51.0",
-    "zod": "^3.23.8"
+    "reactflow": "^11.11.4",
+    "zod": "^3.23.8",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.0",

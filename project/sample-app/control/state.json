@@ -1,0 +1,15 @@
+﻿{
+  "schema": "STATE/V1",
+  "version": "1.0.0",
+  "project_id": "sample-app",
+  "updated_at": "2025-08-24T15:42:00Z",
+  "current": "spec",
+  "nodes": {
+    "spec":     { "mode": "sparc-specification-writer", "status": "ready" },
+    "research": { "mode": "data-researcher",            "status": "pending" },
+    "factcheck":{ "mode": "rapid-fact-checker",         "status": "pending" }
+  },
+  "active": [],
+  "completed": [],
+  "failed": []
+}

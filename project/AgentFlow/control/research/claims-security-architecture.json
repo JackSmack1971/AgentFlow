@@ -1,0 +1,154 @@
+{
+  "id": "security-architecture-best-practices",
+  "title": "Security Architecture Best Practices for Production Systems",
+  "timestamp": "2025-08-24T19:52:02.000Z",
+  "confidence": 0.95,
+  "claims": [
+    {
+      "id": "security-jwt-001",
+      "claim": "JWT tokens should use short expiration times (5-15 minutes) with refresh tokens for extended sessions",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "type": "url",
+          "ref": "https://www.startupdefense.io/cyberattacks/jwt-brute-forcing",
+          "description": "StartupDefense guide on JWT security and brute forcing prevention"
+        },
+        {
+          "type": "url",
+          "ref": "https://hayageek.com/json-web-token-jwt-security-best-practices/",
+          "description": "Comprehensive JWT security best practices guide"
+        },
+        {
+          "type": "url",
+          "ref": "https://article.arunangshudas.com/6-security-concerns-with-jwt-you-should-know-45583b6032f5",
+          "description": "6 critical security concerns with JWT implementation"
+        }
+      ],
+      "risk_level": "Critical",
+      "mitigation": "Implement 5-15 minute access tokens with 7-day refresh tokens, use token blacklists"
+    },
+    {
+      "id": "security-jwt-002",
+      "claim": "JWT algorithm confusion attacks can be prevented by whitelisting specific algorithms and using different keys",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "type": "url",
+          "ref": "https://dev.to/devlinktips/why-your-jwt-might-be-lying-to-you-and-how-to-make-it-tell-the-truth-3gj0",
+          "description": "Dev.to article on JWT algorithm confusion and tampering vulnerabilities"
+        },
+        {
+          "type": "url",
+          "ref": "https://article.arunangshudas.com/6-security-concerns-with-jwt-you-should-know-45583b6032f5",
+          "description": "Algorithm confusion attack patterns and prevention"
+        }
+      ],
+      "risk_level": "High",
+      "mitigation": "Disable 'none' algorithm, whitelist specific algorithms (RS256, ES256), use different keys per algorithm"
+    },
+    {
+      "id": "security-jwt-003",
+      "claim": "JWT tokens are vulnerable to theft through XSS attacks and should be stored securely",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "type": "url",
+          "ref": "https://moldstud.com/articles/p-how-to-secure-your-flask-api-with-jwt-authentication-a-comprehensive-guide",
+          "description": "Flask JWT security guide with storage and theft prevention"
+        },
+        {
+          "type": "url",
+          "ref": "https://blog.cloudflare.com/protecting-apis-with-jwt-validation",
+          "description": "Cloudflare guide on JWT validation and protection"
+        },
+        {
+          "type": "url",
+          "ref": "https://guptadeepak.com/understanding-jwt-from-basics-to-advanced-security/",
+          "description": "JWT security guide with implementation recommendations"
+        }
+      ],
+      "risk_level": "Critical",
+      "mitigation": "Use httpOnly cookies for JWT storage, implement CSRF protection, validate tokens server-side"
+    },
+    {
+      "id": "security-rate-limiting-001",
+      "claim": "Rate limiting should be implemented at multiple layers with Redis-backed tracking",
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "type": "url",
+          "ref": "https://aptori.dev/blog/jwt-security-best-practices-every-developer-should-know",
+          "description": "Advanced JWT security practices including rate limiting"
+        },
+        {
+          "type": "url",
+          "ref": "https://www.aptori.com/blog/jwt-security-best-practices-every-developer-should-know",
+          "description": "JWT security checklist with rate limiting recommendations"
+        }
+      ],
+      "risk_level": "High",
+      "mitigation": "Implement 100 requests/minute per IP, use Redis for distributed rate limiting"
+    },
+    {
+      "id": "security-encryption-001",
+      "claim": "AES-256 encryption should be used for sensitive data with Fernet for OTP secrets",
+      "confidence": 0.95,
+      "evidence": [
+        {
+          "type": "url",
+          "ref": "https://tyk.io/docs/basic-config-and-security/security/authentication-authorization/json-web-tokens/",
+          "description": "Tyk.io JWT authentication with encryption recommendations"
+        }
+      ],
+      "risk_level": "Critical",
+      "mitigation": "Use AES-256 for data encryption, Fernet for OTP secrets, implement proper key management"
+    },
+    {
+      "id": "security-circuit-breakers-001",
+      "claim": "Circuit breakers should be implemented with 3-failure threshold and 10-second reset",
+      "confidence": 0.85,
+      "evidence": [
+        {
+          "type": "url",
+          "ref": "https://aptori.dev/blog/jwt-security-best-practices-every-developer-should-know",
+          "description": "Security practices including circuit breaker patterns"
+        }
+      ],
+      "risk_level": "Medium",
+      "mitigation": "Implement circuit breakers for external service calls with configurable thresholds"
+    }
+  ],
+  "sources": [
+    {
+      "type": "exa_search",
+      "query": "JWT tokens encryption rate limiting circuit breakers production security best practices",
+      "timestamp": "2025-08-24T19:51:12.253Z",
+      "results_count": 10
+    }
+  ],
+  "security_standards": {
+    "jwt_expiration": "5-15 minutes access, 7 days refresh",
+    "rate_limiting": "100 requests/minute per IP",
+    "encryption": "AES-256 for data, Fernet for secrets",
+    "circuit_breaker": "3 failures, 10 second reset",
+    "token_storage": "httpOnly cookies, server-side validation"
+  },
+  "owasp_mapping": {
+    "broken_authentication": ["jwt-001", "jwt-002", "jwt-003"],
+    "cryptographic_failures": ["encryption-001"],
+    "security_misconfiguration": ["rate-limiting-001", "circuit-breakers-001"],
+    "injection": ["jwt-002"],
+    "insecure_design": ["security-standards"]
+  },
+  "recommendations": [
+    "Implement short-lived JWT tokens with refresh token rotation",
+    "Use httpOnly cookies for JWT storage to prevent XSS theft",
+    "Disable 'none' algorithm and whitelist specific signing algorithms",
+    "Implement comprehensive rate limiting with Redis backing",
+    "Use AES-256 encryption for sensitive data storage",
+    "Implement circuit breakers for external service resilience",
+    "Regular security audits and penetration testing",
+    "Monitor for JWT-related security vulnerabilities and patches"
+  ]
+}

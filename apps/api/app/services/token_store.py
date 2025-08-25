@@ -7,6 +7,7 @@ import jwt
 from .. import config
 from ..core.cache import get_cache
 from ..exceptions import CacheError, TokenError
+from ..utils.encryption import get_encryption_manager
 
 settings = config.get_settings()
 
@@ -32,7 +33,10 @@ async def store_refresh_token(token: str, subject: str) -> None:
     cache = get_cache()
     ttl = settings.refresh_token_ttl_minutes * 60
     try:
-        await cache.set(_refresh_key(token), subject, ttl=ttl)
+        # Encrypt the subject data before storing
+        encryption_manager = get_encryption_manager()
+        encrypted_subject = encryption_manager.encrypt(subject)
+        await cache.set(_refresh_key(token), encrypted_subject, ttl=ttl)
     except CacheError as exc:  # pragma: no cover - network failure
         raise TokenError("Could not store refresh token") from exc
 
@@ -40,11 +44,16 @@ async def store_refresh_token(token: str, subject: str) -> None:
 async def verify_refresh_token(token: str) -> str:
     cache = get_cache()
     try:
-        subject = await cache.get(_refresh_key(token))
+        encrypted_subject = await cache.get(_refresh_key(token))
+        if not encrypted_subject:
+            raise TokenError("Invalid refresh token")
+
+        # Decrypt the subject data
+        encryption_manager = get_encryption_manager()
+        subject = encryption_manager.decrypt(encrypted_subject)
+
     except CacheError as exc:  # pragma: no cover - network failure
         raise TokenError("Could not verify refresh token") from exc
-    if not subject:
-        raise TokenError("Invalid refresh token")
     return subject
 
 

@@ -1,44 +1,52 @@
-{
+﻿{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "HANDOFF/V1",
   "type": "object",
-  "required": ["schema", "task_id", "from", "to", "intent", "inputs", "success_criteria", "artifacts", "dependencies", "ttl", "next"],
+  "required": ["schema","handoff_id","parent_id","from","to","objective","inputs","acceptance_criteria","artifacts","dependencies","ttl","next"],
   "properties": {
     "schema": { "const": "HANDOFF/V1" },
-    "task_id": { "type": "string" },
-    "from": { "type": "string", "description": "agent slug" },
-    "to": { "type": "string", "description": "agent slug" },
-    "intent": { "type": "string", "enum": ["plan","research","design","implement","test","verify","integrate","harden","validate","decide"] },
-    "priority": { "type": "string", "enum": ["P0","P1","P2"], "default": "P2" },
-    "inputs": { "type": "object", "additionalProperties": true },
-    "success_criteria": { "type": "array", "items": { "type":"string" }, "minItems": 1 },
-    "acceptance_tests": { "type": "array", "items": { "type": "string" } },
-    "constraints": { "type":"array", "items": { "type":"string" } },
-    "dependencies": {
-      "type":"array",
-      "items": { "type":"object", "required":["ref"], "properties": {
-        "ref": {"type":"string","description":"artifact://path#version or doc id"},
-        "hash": {"type":"string"},
-        "required": {"type":"boolean","default": true}
-      } }
+    "handoff_id": { "type": "string" },
+    "parent_id": { "type": ["string","null"] },
+    "from": {
+      "type": "object",
+      "required": ["mode","timestamp"],
+      "properties": {
+        "mode": { "type": "string" },
+        "agent": { "type": ["string","null"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
     },
-    "artifacts": {
-      "type":"array",
-      "items": { "type":"object", "required":["path"], "properties":{
-        "path":{"type":"string"},
-        "type":{"type":"string","enum":["doc","code","config","report","evidence","state"]},
-        "hash":{"type":"string"},
-        "summary":{"type":"string"}
-      } }
+    "to": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": { "type": "string" },
+        "agent": { "type": ["string","null"] },
+        "timestamp": { "type": ["string","null"], "format": "date-time" }
+      }
     },
-    "risks": { "type": "array", "items": { "type":"string" } },
-    "observability": { "type":"object", "properties":{
-      "metrics":{"type":"array","items":{"type":"string"}},
-      "logs":{"type":"array","items":{"type":"string"}}
-    }},
-    "ttl": { "type": "string", "pattern": "^P\\d+D(T\\d+H)?$" },
-    "next": { "type":"array", "items": { "type":"string", "description":"candidate next hops (slugs), or 'sparc-orchestrator'"} },
-    "terminate_when": { "type":"array", "items":{"type":"string"} },
-    "failure_modes": { "type":"array", "items":{"type":"string"} }
-  }
+    "objective": { "type": "string" },
+    "inputs": { "type": "array", "items": { "type": "string" } },
+    "acceptance_criteria": { "type": "array", "items": { "type": "string" } },
+    "artifacts": { "type": "array", "items": { "type": "string" } },
+    "dependencies": { "type": "array", "items": { "type": "string" } },
+    "ttl": { "type": "string" },
+    "next": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["target_mode","intent"],
+        "properties": {
+          "target_mode": { "type": "string" },
+          "intent": { "type": "string" }
+        }
+      }
+    },
+    "notes": { "type": "string" },
+    "risk_flags": { "type": "array", "items": { "type": "string" } },
+    "status": { "type": "string", "enum": ["open","accepted","rejected","completed"] },
+    "checksums": { "type": "object", "additionalProperties": { "type": "string" } },
+    "links": { "type": "array", "items": { "type": "string", "format": "uri" } }
+  },
+  "additionalProperties": false
 }

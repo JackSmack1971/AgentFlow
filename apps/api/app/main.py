@@ -14,7 +14,7 @@ from .middleware.errors import register_error_handlers
 from .middleware.security import SecurityMiddleware
 from .observability.tracing import setup_tracing
 from .rate_limiter import limiter
-from .routers import agents, auth, cache_examples, health, memory, rag, workflow
+from .routers import agents, auth, cache_examples, health, memory, rag, security, workflow
 from .utils.logging import setup_logging
 
 
@@ -66,5 +66,6 @@ app.include_router(memory.router, prefix="/memory", tags=["memory"])
 app.include_router(rag.router, prefix="/rag", tags=["rag"])
 app.include_router(agents.router, prefix="/agents", tags=["agents"])
 app.include_router(workflow.router, prefix="/workflow", tags=["workflow"])
+app.include_router(security.router, prefix="/security", tags=["security"])
 app.include_router(health.router)
 app.include_router(cache_examples.router, tags=["cache"])

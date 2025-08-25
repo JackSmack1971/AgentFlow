@@ -1,0 +1,27 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Sprint",
+  "type": "object",
+  "required": ["sprint","dates","stories","policy"],
+  "properties": {
+    "sprint": { "type": "integer", "minimum": 1 },
+    "dates": {
+      "type": "object",
+      "required": ["start","end"],
+      "properties": {
+        "start": { "type": "string" },
+        "end": { "type": "string" }
+      }
+    },
+    "stories": { "type": "array", "items": { "type": "string" } },
+    "policy": {
+      "type": "object",
+      "required": ["dor","dod"],
+      "properties": {
+        "dor": { "type": "array", "items": { "type": "string" } },
+        "dod": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "additionalProperties": false
+}

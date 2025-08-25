@@ -113,7 +113,14 @@ class AuthService:
 async def create_access_token(subject: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.access_token_ttl_minutes)
     try:
-        payload = {"sub": subject, "exp": expire, "jti": uuid4().hex}
+        payload = {
+            "sub": subject,
+            "exp": expire,
+            "jti": uuid4().hex,
+            "aud": "agentflow-api",      # ADD AUDIENCE
+            "iss": "agentflow-auth",     # ADD ISSUER
+            "iat": datetime.utcnow()     # ADD ISSUED AT
+        }
         return jwt.encode(payload, settings.secret_key, algorithm="HS256")
     except jwt.PyJWTError as exc:  # pragma: no cover - library failure
         raise TokenError("Could not create access token") from exc
@@ -122,7 +129,14 @@ async def create_access_token(subject: str) -> str:
 async def create_refresh_token(subject: str) -> str:
     expire = datetime.utcnow() + timedelta(minutes=settings.refresh_token_ttl_minutes)
     try:
-        payload = {"sub": subject, "exp": expire, "jti": uuid4().hex}
+        payload = {
+            "sub": subject,
+            "exp": expire,
+            "jti": uuid4().hex,
+            "aud": "agentflow-api",      # ADD AUDIENCE
+            "iss": "agentflow-auth",     # ADD ISSUER
+            "iat": datetime.utcnow()     # ADD ISSUED AT
+        }
         return jwt.encode(payload, settings.secret_key, algorithm="HS256")
     except jwt.PyJWTError as exc:  # pragma: no cover - library failure
         raise TokenError("Could not create refresh token") from exc
@@ -130,8 +144,18 @@ async def create_refresh_token(subject: str) -> str:
 
 async def decode_token(token: str) -> str:
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+        payload = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=["HS256"],
+            audience="agentflow-api",     # VALIDATE AUDIENCE
+            issuer="agentflow-auth"       # VALIDATE ISSUER
+        )
         return payload["sub"]
+    except jwt.InvalidAudienceError:
+        raise TokenError("Invalid token audience")
+    except jwt.InvalidIssuerError:
+        raise TokenError("Invalid token issuer")
     except jwt.PyJWTError as exc:
         raise TokenError("Invalid token") from exc
 

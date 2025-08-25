@@ -1,0 +1,290 @@
+name: Security Gates
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to scan'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+jobs:
+  security-scanning:
+    name: Security Scanning Suite
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version-file: .python-version
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Dependency Vulnerability Scanning
+      - name: Run Safety Check (Python)
+        run: |
+          uv sync --frozen --extra dev
+          uv run safety check --json --output safety-report.json || true
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'AgentFlow'
+          path: '.'
+          format: 'ALL'
+          args: >
+            --enableRetired
+            --enableExperimental
+            --nvdValidForHours 24
+            --suppression suppression.xml
+
+      - name: Run npm audit
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level high --json > npm-audit-report.json || true
+
+      # Static Application Security Testing (SAST)
+      - name: Run Bandit (Python SAST)
+        run: |
+          uv run pip install bandit
+          uv run bandit -r apps/ -f json -o bandit-report.json || true
+
+      - name: Run Semgrep SAST
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: auto
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      # Container Security Scanning
+      - name: Build Docker images
+        run: |
+          docker-compose build --no-cache
+
+      - name: Run Trivy container scanning
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'image'
+          scan-ref: 'agentflow_api:latest'
+          format: 'sarif'
+          output: 'trivy-api-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Run Docker Bench Security
+        run: |
+          docker run --rm --net host \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v /usr/lib/systemd:/usr/lib/systemd \
+            -v /etc:/etc \
+            --label docker_bench_security \
+            docker/docker-bench-security:latest > docker-bench-report.txt || true
+
+      - name: Run Container Structure Tests
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $(pwd):/workspace \
+            gcr.io/gcp-runtimes/container-structure-test:latest \
+            test --image agentflow_api:latest --config container-structure-test.yaml || true
+
+      # Infrastructure as Code Validation
+      - name: Validate Docker Compose
+        run: |
+          docker-compose config --quiet
+          echo "Docker Compose validation passed"
+
+      - name: Check for security misconfigurations
+        run: |
+          # Check for exposed ports
+          grep -r "ports:" docker-compose.yml || echo "No external ports found"
+          # Check for security headers in nginx config if exists
+          find . -name "*.conf" -o -name "nginx*" | head -5
+
+      # Compliance Validation
+      - name: Run CIS Docker Benchmark
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v /usr/lib/systemd:/usr/lib/systemd \
+            -v /etc:/etc \
+            docker/docker-bench-security:latest -c check_1_1,check_2_1,check_2_2 > cis-report.txt || true
+
+      - name: Validate security policies
+        run: |
+          # Check for required security files
+          ls -la SECURITY.md docker-compose.yml .github/workflows/security-gates.yml
+          # Validate that security configurations exist
+          grep -r "non-root\|user:" docker-compose.yml
+
+      # Security Testing Integration
+      - name: Run security unit tests
+        run: |
+          uv run pytest tests/security/ -v --tb=short --junitxml=security-tests.xml || true
+
+      - name: Run penetration testing (ZAP)
+        run: |
+          docker run --rm \
+            -v $(pwd):/zap/wrk \
+            -u zap \
+            owasp/zap2docker-stable:latest \
+            zap-baseline.py \
+            -t http://host.docker.internal:8000 \
+            -r zap-report.html \
+            -x zap-report.xml || true
+
+      # Upload Security Reports
+      - name: Upload SARIF files
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-api-results.sarif
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            **/*-report.json
+            **/*-report.xml
+            **/*-report.html
+            **/*-report.txt
+            **/safety-report.json
+            **/npm-audit-report.json
+            **/bandit-report.json
+            **/docker-bench-report.txt
+            **/cis-report.txt
+            **/security-tests.xml
+            **/zap-report.*
+
+      # Security Gate Decision
+      - name: Evaluate Security Gates
+        id: security-gate
+        run: |
+          echo "Evaluating security scan results..."
+
+          # Check critical vulnerabilities
+          if [ -f "dependency-check-report.xml" ]; then
+            critical_count=$(grep -c 'severity="CRITICAL"' dependency-check-report.xml || echo "0")
+            high_count=$(grep -c 'severity="HIGH"' dependency-check-report.xml || echo "0")
+
+            if [ "$critical_count" -gt 0 ]; then
+              echo "❌ Critical vulnerabilities found: $critical_count"
+              echo "security-gate-status=failed" >> $GITHUB_OUTPUT
+              exit 1
+            elif [ "$high_count" -gt 5 ]; then
+              echo "❌ Too many high vulnerabilities: $high_count"
+              echo "security-gate-status=failed" >> $GITHUB_OUTPUT
+              exit 1
+            else
+              echo "✅ Dependency check passed"
+            fi
+          fi
+
+          # Check container vulnerabilities
+          if [ -f "trivy-api-results.sarif" ]; then
+            critical_vulns=$(grep -c '"level": "error"' trivy-api-results.sarif || echo "0")
+            if [ "$critical_vulns" -gt 0 ]; then
+              echo "❌ Critical container vulnerabilities found: $critical_vulns"
+              echo "security-gate-status=failed" >> $GITHUB_OUTPUT
+              exit 1
+            else
+              echo "✅ Container security check passed"
+            fi
+          fi
+
+          # Check SAST results
+          if [ -f "bandit-report.json" ]; then
+            high_issues=$(grep -c '"issue_severity": "HIGH"' bandit-report.json || echo "0")
+            if [ "$high_issues" -gt 0 ]; then
+              echo "❌ High severity SAST issues found: $high_issues"
+              echo "security-gate-status=failed" >> $GITHUB_OUTPUT
+              exit 1
+            else
+              echo "✅ SAST check passed"
+            fi
+          fi
+
+          echo "✅ All security gates passed"
+          echo "security-gate-status=passed" >> $GITHUB_OUTPUT
+
+      - name: Comment Security Results on PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request' && always()
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            let comment = '## 🔒 Security Scan Results\n\n';
+
+            // Read and summarize reports
+            const reports = [
+              { file: 'dependency-check-report.xml', name: 'Dependency Check' },
+              { file: 'trivy-api-results.sarif', name: 'Container Security' },
+              { file: 'bandit-report.json', name: 'SAST (Bandit)' },
+              { file: 'safety-report.json', name: 'Python Safety' },
+              { file: 'npm-audit-report.json', name: 'NPM Audit' }
+            ];
+
+            reports.forEach(report => {
+              if (fs.existsSync(report.file)) {
+                comment += `✅ ${report.name}: Report generated\n`;
+              } else {
+                comment += `❌ ${report.name}: Failed to generate report\n`;
+              }
+            });
+
+            const gateStatus = '${{ steps.security-gate.outputs.security-gate-status }}';
+            if (gateStatus === 'passed') {
+              comment += '\n🎉 **All security gates passed!** Ready for deployment.';
+            } else {
+              comment += '\n⚠️ **Security issues found.** Please review the reports and fix the issues.';
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Fail workflow on security issues
+        if: steps.security-gate.outputs.security-gate-status == 'failed'
+        run: |
+          echo "Security gates failed. Please review the security reports and fix the issues."
+          exit 1

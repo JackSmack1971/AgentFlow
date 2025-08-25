@@ -29,6 +29,15 @@ from apps.api.app.main import app
 from apps.api.app.services.auth import AuthService
 from apps.api.app.utils.encryption import get_encryption_manager
 from apps.api.app.utils.password import hash_password, verify_password
+from apps.api.app.services.rate_limiting_service import (
+    RateLimitingService,
+    RateLimitConfig,
+    RateLimitStrategy
+)
+from apps.api.app.services.security_monitoring import (
+    SecurityMonitoringService,
+    MonitoringConfig
+)
 
 # Security-specific test settings
 os.environ.setdefault("DATABASE_URL", "postgresql://test_user:test_pass@localhost:5432/test_security_db")
@@ -258,3 +267,45 @@ async def redis_client():
     # Cleanup
     await client.flushdb()
     await client.close()
+
+
+@pytest.fixture
+def rate_limit_config():
+    """Provide rate limiting configuration for testing."""
+    return RateLimitConfig(
+        requests_per_minute=100,
+        burst_limit=20,
+        window_seconds=60,
+        strategy=RateLimitStrategy.SLIDING_WINDOW
+    )
+
+
+@pytest.fixture
+def rate_limiting_service(redis_client, rate_limit_config):
+    """Provide rate limiting service for testing."""
+    return RateLimitingService(redis_client, rate_limit_config)
+
+
+@pytest.fixture
+def monitoring_config():
+    """Provide security monitoring configuration for testing."""
+    return MonitoringConfig(
+        alert_thresholds={
+            EventType.SUSPICIOUS_LOGIN: 3,
+            EventType.RATE_LIMIT_EXCEEDED: 5,
+            EventType.UNAUTHORIZED_ACCESS: 1
+        },
+        metrics_retention_days=30,
+        enable_real_time_alerts=True,
+        anomaly_detection_enabled=True
+    )
+
+
+@pytest.fixture
+def security_monitoring_service(redis_client, monitoring_config):
+    """Provide security monitoring service for testing."""
+    return SecurityMonitoringService(redis_client, monitoring_config)
+
+
+# Import EventType for fixtures
+from apps.api.app.services.security_monitoring import EventType

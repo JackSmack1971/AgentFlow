@@ -1,0 +1,146 @@
+version: "1.0"
+project_id: "AgentFlow"
+description: "SPARC workflow graph for AgentFlow adoption"
+
+nodes:
+  - id: "spec"
+    name: "Repository Inventory & Specification"
+    description: "Inventory repo, produce system overview, detect existing specs/arch/tests/CI"
+    status: "ready"
+    mode: "sparc-specification-writer"
+
+  - id: "research"
+    name: "Research Claims"
+    description: "Gather decision-grade sources for top 3 risky decisions"
+    status: "pending"
+    mode: "data-researcher"
+
+  - id: "factcheck"
+    name: "Fact Check"
+    description: "Cross-verify researcher claims, enforce ≥95% confidence"
+    status: "pending"
+    mode: "rapid-fact-checker"
+
+  - id: "arch"
+    name: "Architecture"
+    description: "Produce architecture.md, component boundaries, interfaces, data flows"
+    status: "pending"
+    mode: "sparc-architect"
+
+  - id: "sec-arch"
+    name: "Security Architecture"
+    description: "Create threat-model.md & security-architecture.md, compliance/controls"
+    status: "pending"
+    mode: "sparc-security-architect"
+
+  - id: "pseudo"
+    name: "Pseudocode Design"
+    description: "Produce pseudocode.md + function-specs for top sprint stories"
+    status: "pending"
+    mode: "sparc-pseudocode-designer"
+
+  - id: "tdd"
+    name: "TDD Engineering"
+    description: "Write failing tests with coverage targets per pseudocode"
+    status: "pending"
+    mode: "sparc-tdd-engineer"
+
+  - id: "impl"
+    name: "Implementation"
+    description: "Implement features to turn tests green, respect interfaces"
+    status: "pending"
+    mode: "sparc-code-implementer"
+
+  - id: "qa"
+    name: "Quality Assurance"
+    description: "Acceptance testing, publish QA report, sync acceptance-test-results.md"
+    status: "completed"
+    mode: "sparc-qa-analyst"
+
+  - id: "adversary"
+    name: "Adversarial Testing"
+    description: "Risk register updates, comprehensive risk review"
+    status: "ready"
+    mode: "sparc-autonomous-adversary"
+
+  - id: "reviewer"
+    name: "Security Review"
+    description: "SAST/deps/config audits + SARIF output"
+    status: "pending"
+    mode: "security-reviewer"
+
+  - id: "integrate"
+    name: "Integration"
+    description: "End-to-end validation, integration-report.md"
+    status: "pending"
+    mode: "sparc-integrator"
+
+  - id: "platform"
+    name: "Platform Engineering"
+    description: "CI/CD, IaC, observability configs, rollback strategies"
+    status: "pending"
+    mode: "sparc-platform-engineer"
+
+  - id: "sre"
+    name: "SRE Engineering"
+    description: "SLI/SLOs, alerting, runbooks, error budgets"
+    status: "pending"
+    mode: "sparc-sre-engineer"
+
+edges:
+  - from: "spec"
+    to: "research"
+    condition: "inventory_complete"
+
+  - from: "research"
+    to: "factcheck"
+    condition: "research_complete"
+
+  - from: "factcheck"
+    to: "arch"
+    condition: "verification_complete"
+
+  - from: "arch"
+    to: "sec-arch"
+    condition: "architecture_complete"
+
+  - from: "sec-arch"
+    to: "pseudo"
+    condition: "security_architecture_complete"
+
+  - from: "pseudo"
+    to: "tdd"
+    condition: "pseudocode_complete"
+
+  - from: "tdd"
+    to: "impl"
+    condition: "tests_written"
+
+  - from: "impl"
+    to: "qa"
+    condition: "implementation_complete"
+
+  - from: "qa"
+    to: "adversary"
+    condition: "qa_complete"
+
+  - from: "adversary"
+    to: "reviewer"
+    condition: "adversary_complete"
+
+  - from: "reviewer"
+    to: "integrate"
+    condition: "security_review_complete"
+
+  - from: "integrate"
+    to: "platform"
+    condition: "integration_complete"
+
+  - from: "platform"
+    to: "sre"
+    condition: "platform_complete"
+
+metadata:
+  created_at: "2025-08-24T19:39:24.328Z"
+  updated_at: "2025-08-24T19:39:24.328Z"
+  version: "1.0"

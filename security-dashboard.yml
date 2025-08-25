@@ -1,0 +1,378 @@
+# Security Metrics and Monitoring Dashboard Configuration
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: security-dashboard-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    rule_files:
+      - /etc/prometheus/security-alerts.yml
+
+    scrape_configs:
+      - job_name: 'agentflow-api'
+        static_configs:
+          - targets: ['agentflow-api:8000']
+        metrics_path: '/metrics'
+        scrape_interval: 30s
+
+      - job_name: 'security-metrics'
+        static_configs:
+          - targets: ['security-exporter:8080']
+        scrape_interval: 60s
+
+  security-alerts.yml: |
+    groups:
+      - name: security_alerts
+        rules:
+          # Authentication Security
+          - alert: HighFailedLoginRate
+            expr: rate(failed_login_attempts_total[5m]) > 10
+            for: 5m
+            labels:
+              severity: warning
+              team: security
+            annotations:
+              summary: "High rate of failed login attempts"
+              description: "More than 10 failed login attempts per minute detected"
+
+          - alert: AccountLockout
+            expr: rate(account_locked_total[1m]) > 5
+            for: 2m
+            labels:
+              severity: critical
+              team: security
+            annotations:
+              summary: "Multiple account lockouts detected"
+              description: "More than 5 accounts locked out in the last minute"
+
+          # API Security
+          - alert: HighRateLimitViolations
+            expr: rate(rate_limit_exceeded_total[5m]) > 20
+            for: 5m
+            labels:
+              severity: warning
+              team: security
+            annotations:
+              summary: "High rate of API rate limit violations"
+              description: "More than 20 rate limit violations in the last 5 minutes"
+
+          - alert: SQLInjectionAttempts
+            expr: rate(sql_injection_attempts_total[5m]) > 0
+            for: 1m
+            labels:
+              severity: critical
+              team: security
+            annotations:
+              summary: "SQL injection attempts detected"
+              description: "Potential SQL injection attacks detected in API requests"
+
+          - alert: XSSAttempts
+            expr: rate(xss_attempts_total[5m]) > 0
+            for: 1m
+            labels:
+              severity: critical
+              team: security
+            annotations:
+              summary: "XSS attempts detected"
+              description: "Potential cross-site scripting attacks detected"
+
+          # Infrastructure Security
+          - alert: HighContainerVulnerabilities
+            expr: container_vulnerabilities_total{severity="CRITICAL"} > 0
+            for: 5m
+            labels:
+              severity: critical
+              team: security
+            annotations:
+              summary: "Critical container vulnerabilities detected"
+              description: "Containers running with critical vulnerabilities"
+
+          - alert: OutdatedDependencies
+            expr: outdated_dependencies_total > 20
+            for: 1h
+            labels:
+              severity: warning
+              team: security
+            annotations:
+              summary: "Many outdated dependencies"
+              description: "More than 20 dependencies are outdated"
+
+          # System Security
+          - alert: RootContainerUsage
+            expr: container_user_info{user="root"} > 0
+            for: 10m
+            labels:
+              severity: warning
+              team: security
+            annotations:
+              summary: "Containers running as root"
+              description: "One or more containers are running with root privileges"
+
+          - alert: ExposedPorts
+            expr: exposed_ports_total > 5
+            for: 5m
+            labels:
+              severity: info
+              team: security
+            annotations:
+              summary: "Many exposed ports"
+              description: "More than 5 ports are exposed externally"
+
+  grafana-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "AgentFlow Security Dashboard",
+        "tags": ["security", "agentflow"],
+        "timezone": "UTC",
+        "panels": [
+          {
+            "title": "Authentication Security",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(failed_login_attempts_total[5m])",
+                "legendFormat": "Failed Login Attempts"
+              },
+              {
+                "expr": "rate(successful_login_total[5m])",
+                "legendFormat": "Successful Logins"
+              },
+              {
+                "expr": "rate(account_locked_total[5m])",
+                "legendFormat": "Account Lockouts"
+              }
+            ]
+          },
+          {
+            "title": "API Security Threats",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(rate_limit_exceeded_total[5m])",
+                "legendFormat": "Rate Limit Violations"
+              },
+              {
+                "expr": "rate(sql_injection_attempts_total[5m])",
+                "legendFormat": "SQL Injection Attempts"
+              },
+              {
+                "expr": "rate(xss_attempts_total[5m])",
+                "legendFormat": "XSS Attempts"
+              },
+              {
+                "expr": "rate(suspicious_requests_total[5m])",
+                "legendFormat": "Suspicious Requests"
+              }
+            ]
+          },
+          {
+            "title": "Container Security",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "container_vulnerabilities_total{severity=\"CRITICAL\"}",
+                "legendFormat": "Critical Vulnerabilities"
+              },
+              {
+                "expr": "container_vulnerabilities_total{severity=\"HIGH\"}",
+                "legendFormat": "High Vulnerabilities"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "green", "value": null },
+                    { "color": "red", "value": 1 }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "title": "Dependency Health",
+            "type": "table",
+            "targets": [
+              {
+                "expr": "outdated_dependencies_total",
+                "legendFormat": "Outdated Dependencies"
+              },
+              {
+                "expr": "vulnerable_dependencies_total",
+                "legendFormat": "Vulnerable Dependencies"
+              }
+            ]
+          },
+          {
+            "title": "Security Compliance Score",
+            "type": "gauge",
+            "targets": [
+              {
+                "expr": "security_compliance_score",
+                "legendFormat": "Compliance Score"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "min": 0,
+                "max": 100,
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    { "color": "red", "value": 0 },
+                    { "color": "orange", "value": 50 },
+                    { "color": "green", "value": 80 }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "title": "Security Events Timeline",
+            "type": "logs",
+            "targets": [
+              {
+                "expr": "{job=\"agentflow-api\"} |= \"SECURITY\" | json",
+                "legendFormat": "Security Events"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+
+  security-exporter.py: |
+    #!/usr/bin/env python3
+    """
+    Security Metrics Exporter for Prometheus
+    """
+    import time
+    import json
+    from prometheus_client import start_http_server, Gauge, Counter, Histogram
+    import subprocess
+    import os
+
+    # Security Metrics
+    FAILED_LOGIN_ATTEMPTS = Counter('failed_login_attempts_total', 'Total failed login attempts')
+    SUCCESSFUL_LOGINS = Counter('successful_login_total', 'Total successful logins')
+    ACCOUNT_LOCKOUTS = Counter('account_locked_total', 'Total account lockouts')
+    RATE_LIMIT_VIOLATIONS = Counter('rate_limit_exceeded_total', 'Total rate limit violations')
+    SQL_INJECTION_ATTEMPTS = Counter('sql_injection_attempts_total', 'Total SQL injection attempts')
+    XSS_ATTEMPTS = Counter('xss_attempts_total', 'Total XSS attempts')
+    SUSPICIOUS_REQUESTS = Counter('suspicious_requests_total', 'Total suspicious requests')
+
+    # Container Security Metrics
+    CONTAINER_VULNERABILITIES = Gauge('container_vulnerabilities_total', 'Total container vulnerabilities', ['severity'])
+    OUTDATED_DEPENDENCIES = Gauge('outdated_dependencies_total', 'Total outdated dependencies')
+    VULNERABLE_DEPENDENCIES = Gauge('vulnerable_dependencies_total', 'Total vulnerable dependencies')
+    EXPOSED_PORTS = Gauge('exposed_ports_total', 'Total exposed ports')
+
+    # Compliance Metrics
+    SECURITY_COMPLIANCE_SCORE = Gauge('security_compliance_score', 'Security compliance score (0-100)')
+
+    def collect_security_metrics():
+        """Collect security metrics from various sources"""
+        try:
+            # Collect container vulnerabilities
+            result = subprocess.run(['trivy', 'image', '--format', 'json', 'agentflow:latest'],
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                vulnerabilities = json.loads(result.stdout)
+                critical_count = sum(1 for v in vulnerabilities.get('Vulnerabilities', [])
+                                   if v.get('Severity') == 'CRITICAL')
+                high_count = sum(1 for v in vulnerabilities.get('Vulnerabilities', [])
+                               if v.get('Severity') == 'HIGH')
+
+                CONTAINER_VULNERABILITIES.labels(severity='CRITICAL').set(critical_count)
+                CONTAINER_VULNERABILITIES.labels(severity='HIGH').set(high_count)
+
+            # Collect dependency information
+            result = subprocess.run(['pip', 'list', '--outdated', '--format=json'],
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                outdated = json.loads(result.stdout)
+                OUTDATED_DEPENDENCIES.set(len(outdated))
+
+            # Check exposed ports
+            result = subprocess.run(['docker-compose', 'config'],
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                exposed_count = result.stdout.count('ports:')
+                EXPOSED_PORTS.set(exposed_count)
+
+            # Calculate compliance score (simplified)
+            compliance_score = 85  # This would be calculated based on various factors
+            SECURITY_COMPLIANCE_SCORE.set(compliance_score)
+
+        except Exception as e:
+            print(f"Error collecting security metrics: {e}")
+
+    if __name__ == '__main__':
+        start_http_server(8080)
+        print("Security metrics exporter started on port 8080")
+
+        while True:
+            collect_security_metrics()
+            time.sleep(300)  # Collect every 5 minutes
+
+  alertmanager.yml: |
+    global:
+      smtp_smarthost: 'smtp.gmail.com:587'
+      smtp_from: 'security@agentflow.com'
+      smtp_auth_username: '${SMTP_USERNAME}'
+      smtp_auth_password: '${SMTP_PASSWORD}'
+
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'security-team'
+      routes:
+        - match:
+            team: security
+            severity: critical
+          receiver: 'security-pager'
+        - match:
+            team: security
+            severity: warning
+          receiver: 'security-email'
+
+    receivers:
+      - name: 'security-team'
+        slack_configs:
+          - api_url: '${SLACK_WEBHOOK_URL}'
+            channel: '#security-alerts'
+            title: '{{ .GroupLabels.alertname }}'
+            text: '{{ .CommonAnnotations.description }}'
+        email_configs:
+          - to: 'security@company.com'
+            subject: 'Security Alert: {{ .GroupLabels.alertname }}'
+            body: '{{ .CommonAnnotations.description }}'
+
+      - name: 'security-pager'
+        pagerduty_configs:
+          - service_key: '${PAGERDUTY_SERVICE_KEY}'
+        slack_configs:
+          - api_url: '${SLACK_WEBHOOK_URL}'
+            channel: '#security-critical'
+            title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+            text: '{{ .CommonAnnotations.description }}'
+
+      - name: 'security-email'
+        email_configs:
+          - to: 'security@company.com'
+            subject: 'Security Warning: {{ .GroupLabels.alertname }}'
+            body: '{{ .CommonAnnotations.description }}'

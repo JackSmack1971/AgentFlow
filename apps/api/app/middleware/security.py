@@ -12,6 +12,9 @@ from redis.asyncio import Redis
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..core.settings import Settings
+from ..services.rate_limiting_service import RateLimitingService, RateLimitConfig, RateLimitStrategy, RateLimitExceeded
+from ..services.security_monitoring import SecurityMonitoringService, MonitoringConfig, SecurityEvent, EventType, AlertSeverity
+from ..utils.logging import get_security_logger
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
@@ -21,27 +24,54 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         """Initialize security middleware with configuration."""
         super().__init__(app)
         self.settings = settings
-        self.logger = self._setup_security_logger()
+        self.security_logger = get_security_logger()
 
         # Initialize Redis for distributed security state
         self.redis = Redis.from_url(settings.redis_url)
 
-        # Initialize FastAPI Guard with security configuration
+        # Initialize enhanced rate limiting service
+        rate_limit_config = RateLimitConfig(
+            requests_per_minute=settings.security_rate_limit_per_minute,
+            burst_limit=10,  # Allow some burst capacity
+            strategy=RateLimitStrategy.SLIDING_WINDOW
+        )
+        self.rate_limiter = RateLimitingService(self.redis, rate_limit_config)
+
+        # Initialize security monitoring service
+        monitoring_config = MonitoringConfig(
+            alert_thresholds={
+                EventType.RATE_LIMIT_EXCEEDED: 5,
+                EventType.UNAUTHORIZED_ACCESS: 3,
+                EventType.SUSPICIOUS_LOGIN: 3,
+                EventType.SQL_INJECTION: 1,
+                EventType.XSS_ATTEMPT: 3,
+                EventType.BRUTE_FORCE: 5,
+                EventType.DOS_ATTACK: 10
+            },
+            enable_real_time_alerts=True
+        )
+        self.security_monitor = SecurityMonitoringService(self.redis, monitoring_config)
+
+        # Set security monitor in logging system for integration
+        from ..utils.logging import set_security_monitor
+        set_security_monitor(self.security_monitor)
+
+        # Initialize FastAPI Guard with security configuration (keeping for compatibility)
         self.guard = FastAPIGuard(
             redis_url=settings.redis_url,
             rate_limit_per_minute=settings.security_rate_limit_per_minute,
             ban_after_attempts=settings.security_penetration_attempts_threshold,
             ban_duration_minutes=settings.security_ban_duration_minutes,
             enable_penetration_detection=True,
-            enable_rate_limiting=True,
+            enable_rate_limiting=False,  # Disabled since we use enhanced rate limiter
             enable_ip_filtering=self._is_production(),
         )
 
         # Parse development IP whitelist
         self.dev_ip_networks = self._parse_ip_whitelist()
 
-        self.logger.info(
-            f"Security middleware initialized - Environment: {settings.environment}, "
+        self.security_logger.info(
+            f"Enhanced Security middleware initialized - Environment: {settings.environment}, "
             f"Rate limit: {settings.security_rate_limit_per_minute}/min, "
             f"Ban threshold: {settings.security_penetration_attempts_threshold} attempts"
         )
@@ -135,13 +165,17 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
             if not is_allowed:
                 # Log security violation
-                await self._log_security_event(
-                    "SECURITY_VIOLATION",
+                violation_type = "rate_limit_exceeded" if security_info.get("reason") == "rate_limited" else "brute_force"
+                await self.security_logger.log_security_event(
+                    violation_type,
                     client_ip,
-                    user_agent,
-                    security_info,
-                    request.url.path,
-                    request.method
+                    details={
+                        "user_agent": user_agent,
+                        "path": request.url.path,
+                        "method": request.method,
+                        "violation_info": security_info
+                    },
+                    severity="high"
                 )
 
                 # Return appropriate error response
@@ -165,13 +199,15 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
             # Log successful request (for audit trail)
             if request.url.path not in ["/health", "/docs", "/redoc", "/openapi.json"]:
-                await self._log_security_event(
-                    "REQUEST_ALLOWED",
+                await self.security_logger.log_security_event(
+                    "request_allowed",
                     client_ip,
-                    user_agent,
-                    {"method": request.method, "path": request.url.path},
-                    request.url.path,
-                    request.method
+                    details={
+                        "user_agent": user_agent,
+                        "method": request.method,
+                        "path": request.url.path
+                    },
+                    severity="low"
                 )
 
             # Process request
@@ -186,13 +222,11 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             # Log unexpected errors
-            await self._log_security_event(
-                "SECURITY_ERROR",
+            await self.security_logger.log_security_event(
+                "unauthorized_access",
                 client_ip,
-                user_agent,
-                {"error": str(e)},
-                request.url.path,
-                request.method
+                details={"error": str(e), "user_agent": user_agent, "path": request.url.path, "method": request.method},
+                severity="high"
             )
             # Continue processing request despite security middleware errors
             return await call_next(request)
@@ -213,26 +247,28 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                     "ban_remaining_seconds": ban_ttl
                 }
 
-            # Check rate limiting
-            rate_limit_key = f"security:rate_limit:{client_ip}"
-            current_count = await self.redis.get(rate_limit_key)
+            # Check enhanced rate limiting
+            try:
+                await self.rate_limiter.check_rate_limit(client_ip)
+            except RateLimitExceeded as e:
+                # Log rate limit event
+                await self.security_monitor.record_security_event(
+                    SecurityEvent(
+                        event_type=EventType.RATE_LIMIT_EXCEEDED,
+                        identifier=client_ip,
+                        details={
+                            "retry_after": e.retry_after,
+                            "limit": self.settings.security_rate_limit_per_minute
+                        },
+                        severity=AlertSeverity.MEDIUM
+                    )
+                )
 
-            if current_count is None:
-                await self.redis.setex(rate_limit_key, 60, 1)  # 1 minute window
-                current_count = 1
-            else:
-                current_count = int(current_count)
-
-            if current_count >= self.settings.security_rate_limit_per_minute:
-                retry_after = await self.redis.ttl(rate_limit_key)
                 return False, {
                     "reason": "rate_limited",
-                    "retry_after": retry_after,
-                    "current_count": current_count
+                    "retry_after": e.retry_after,
+                    "current_count": self.settings.security_rate_limit_per_minute
                 }
-
-            # Increment rate limit counter
-            await self.redis.incr(rate_limit_key)
 
             # Check for suspicious patterns (penetration detection)
             suspicious_patterns = self._detect_suspicious_patterns(request)
@@ -257,7 +293,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             return True, {}
 
         except Exception as e:
-            self.logger.error(f"Security check error for {client_ip}: {e}")
+            self.security_logger.error(f"Security check error for {client_ip}: {e}")
             # Allow request to continue if security check fails
             return True, {"warning": "security_check_failed"}
 
@@ -303,13 +339,34 @@ class SecurityMiddleware(BaseHTTPMiddleware):
 
     async def _handle_suspicious_activity(self, client_ip: str, patterns: List[str], request: Request):
         """Handle detected suspicious activity."""
-        await self._log_security_event(
-            "SUSPICIOUS_ACTIVITY",
+        # Determine event type and severity based on patterns
+        event_type = "suspicious_login"  # Default
+        severity = "medium"
+
+        if "sql_injection" in patterns:
+            event_type = "sql_injection"
+            severity = "high"
+        elif "xss_attempt" in patterns:
+            event_type = "xss_attempt"
+            severity = "high"
+        elif "directory_traversal" in patterns:
+            event_type = "unauthorized_access"
+            severity = "high"
+        elif "large_query_string" in patterns or "large_header_value" in patterns:
+            event_type = "dos_attack"
+            severity = "medium"
+
+        # Log to integrated security logger (which handles both logging and monitoring)
+        await self.security_logger.log_security_event(
+            event_type,
             client_ip,
-            request.headers.get("User-Agent", "unknown"),
-            {"patterns": patterns, "path": request.url.path, "method": request.method},
-            request.url.path,
-            request.method
+            details={
+                "patterns": patterns,
+                "path": request.url.path,
+                "method": request.method,
+                "user_agent": request.headers.get("User-Agent", "unknown")
+            },
+            severity=severity
         )
 
     async def _increment_failed_attempts(self, client_ip: str) -> int:
@@ -326,13 +383,27 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         ban_duration = self.settings.security_ban_duration_minutes * 60
         await self.redis.setex(ban_key, ban_duration, "banned")
 
-        await self._log_security_event(
-            "IP_BANNED",
+        # Log ban event to security monitoring service
+        await self.security_monitor.record_security_event(
+            SecurityEvent(
+                event_type=EventType.BRUTE_FORCE,
+                identifier=client_ip,
+                details={
+                    "ban_duration_minutes": self.settings.security_ban_duration_minutes,
+                    "ban_duration_seconds": ban_duration
+                },
+                severity=AlertSeverity.HIGH
+            )
+        )
+
+        await self.security_logger.log_security_event(
+            "brute_force",
             client_ip,
-            "unknown",
-            {"ban_duration_minutes": self.settings.security_ban_duration_minutes},
-            "N/A",
-            "N/A"
+            details={
+                "ban_duration_minutes": self.settings.security_ban_duration_minutes,
+                "ban_duration_seconds": ban_duration
+            },
+            severity="high"
         )
 
     async def _log_security_event(self, event_type: str, client_ip: str, user_agent: str,
