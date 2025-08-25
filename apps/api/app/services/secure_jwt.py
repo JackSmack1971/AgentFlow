@@ -12,9 +12,12 @@ providing enhanced security features including:
 
 import base64
 import json
+import logging
+import os
 import secrets
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
+from pathlib import Path
+from typing import Dict, Any, List, Optional
 from uuid import uuid4
 
 import jwt
@@ -25,6 +28,9 @@ from ..exceptions import TokenError
 from ..utils.encryption import get_encryption_manager
 
 
+logger = logging.getLogger(__name__)
+
+
 class SecureJWTHandler:
     """
     Enhanced JWT handler with encryption, comprehensive validation,
@@ -33,27 +39,25 @@ class SecureJWTHandler:
 
     def __init__(
         self,
-        secret_key: str,
-        algorithm: str = "HS256",
+        redis_client=None,
+        algorithm: str = "RS256",
         audience: str = "agentflow-api",
         issuer: str = "agentflow-auth",
-        redis_client=None
-    ):
-        """
-        Initialize secure JWT handler with validation parameters.
-
-        Args:
-            secret_key: Cryptographically secure secret key
-            algorithm: JWT algorithm (default HS256)
-            audience: Token audience for validation
-            issuer: Token issuer for validation
-            redis_client: Redis client for token storage and revocation
-        """
-        self.secret_key = secret_key
+        private_key_path: Optional[str] = None,
+        public_key_path: Optional[str] = None,
+    ) -> None:
+        """Initialize secure JWT handler with RSA key loading."""
+        self.private_key_path = private_key_path or os.getenv("JWT_PRIVATE_KEY_PATH")
+        self.public_key_path = public_key_path or os.getenv("JWT_PUBLIC_KEY_PATH")
+        if not self.private_key_path or not self.public_key_path:
+            raise TokenError("RSA key paths not provided")
+        self.private_key = Path(self.private_key_path).read_text()
+        self.public_key = Path(self.public_key_path).read_text()
         self.algorithm = algorithm
         self.audience = audience
         self.issuer = issuer
         self.redis_client = redis_client
+        self.secret_key = self.private_key
         self.encryption_key = self._derive_encryption_key()
         self.encryption_manager = get_encryption_manager()
 
@@ -104,7 +108,7 @@ class SecureJWTHandler:
             # Create JWE (JSON Web Encryption) token
             token = jwt.encode(
                 payload,
-                self.secret_key,
+                self.private_key,
                 algorithm=self.algorithm,
                 headers={
                     "kid": f"agentflow-key-{datetime.utcnow().year}",
@@ -141,7 +145,7 @@ class SecureJWTHandler:
             # Step 1: Decode with comprehensive validation
             payload = jwt.decode(
                 token,
-                self.secret_key,
+                self.public_key,
                 algorithms=[self.algorithm],
                 audience=self.audience,
                 issuer=self.issuer,
@@ -151,12 +155,13 @@ class SecureJWTHandler:
                     "verify_iat": True,
                     "verify_nbf": True,
                     "verify_aud": True,
-                    "verify_iss": True
-                }
+                    "verify_iss": True,
+                },
             )
 
             # Step 2: Check token revocation
             if await self._is_token_revoked(payload['jti']):
+                logger.warning("Token revoked", extra={"jti": payload['jti']})
                 raise TokenError("Token has been revoked")
 
             # Step 3: Validate token claims
@@ -170,15 +175,40 @@ class SecureJWTHandler:
             return payload
 
         except jwt.ExpiredSignatureError:
+            logger.warning("Token expired", extra={"error": "expired_signature"})
             raise TokenError("Token has expired")
         except jwt.InvalidAudienceError:
+            logger.warning("Invalid audience", extra={"error": "invalid_audience"})
             raise TokenError("Invalid token audience")
         except jwt.InvalidIssuerError:
+            logger.warning("Invalid issuer", extra={"error": "invalid_issuer"})
             raise TokenError("Invalid token issuer")
         except jwt.InvalidSignatureError:
+            logger.warning("Invalid signature", extra={"error": "invalid_signature"})
             raise TokenError("Invalid token signature")
         except Exception as e:
+            logger.warning("Token validation error", exc_info=True)
             raise TokenError(f"Token validation error: {str(e)}")
+
+    async def rotate_tokens(self, refresh_token: str) -> Dict[str, str]:
+        """Validate refresh token and issue new token pair."""
+        if not refresh_token:
+            raise TokenError("Refresh token required")
+        payload = await self.validate_token(refresh_token)
+        jti, subject = payload["jti"], payload["sub"]
+        if self.redis_client:
+            try:
+                await self.redis_client.setex(
+                    f"revoked:refresh:{jti}",
+                    604800,
+                    "revoked",
+                )
+                logger.warning("Refresh token revoked", extra={"jti": jti, "sub": subject})
+            except Exception as exc:  # pragma: no cover - best effort
+                logger.warning("Refresh token revocation failed", extra={"error": str(exc)})
+        access = await self.create_secure_token(subject, payload.get("roles"), 60)
+        new_refresh = await self.create_secure_token(subject, payload.get("roles"), 10080)
+        return {"access_token": access, "refresh_token": new_refresh}
 
     def _generate_secure_jti(self) -> str:
         """Generate cryptographically secure JWT ID."""
@@ -223,7 +253,7 @@ class SecureJWTHandler:
 
         except Exception as e:
             # Log error but don't fail token creation
-            print(f"Failed to store token metadata: {e}")
+            logger.warning("Failed to store token metadata", exc_info=True)
 
     async def _is_token_revoked(self, jti: str) -> bool:
         """Check if token has been revoked."""
@@ -233,7 +263,7 @@ class SecureJWTHandler:
             return False
         except Exception as e:
             # Fail open for Redis issues
-            print(f"Token revocation check failed: {e}")
+            logger.warning("Token revocation check failed", extra={"error": str(e)})
             return False
 
     def _validate_token_claims(self, payload: Dict[str, Any]):
@@ -331,10 +361,11 @@ class TokenRevocationService:
             # Clean up old revocation records
             await self._cleanup_expired_revocations()
 
+            logger.warning("Access token revoked", extra={"jti": jti, "sub": subject})
             return True
 
         except Exception as e:
-            print(f"Token revocation failed: {e}")
+            logger.warning("Token revocation failed", extra={"error": str(e)})
             return False
 
     async def revoke_refresh_token(
@@ -358,14 +389,15 @@ class TokenRevocationService:
                 json.dumps({
                     "revoked_at": datetime.utcnow().isoformat(),
                     "subject": subject,
-                    "token_type": "refresh"
+                    "token_type": "refresh",
                 })
             )
 
+            logger.warning("Refresh token revoked", extra={"jti": jti, "sub": subject})
             return True
 
         except Exception as e:
-            print(f"Refresh token revocation failed: {e}")
+            logger.warning("Refresh token revocation failed", extra={"error": str(e)})
             return False
 
     async def revoke_user_sessions(self, subject: str, reason: str = "admin_action") -> int:
@@ -403,14 +435,18 @@ class TokenRevocationService:
                 json.dumps({
                     "revoked_at": datetime.utcnow().isoformat(),
                     "reason": reason,
-                    "session_count": revoked_count
+                    "session_count": revoked_count,
                 })
             )
 
+            logger.warning(
+                "User sessions revoked",
+                extra={"subject": subject, "count": revoked_count},
+            )
             return revoked_count
 
         except Exception as e:
-            print(f"User session revocation failed: {e}")
+            logger.warning("User session revocation failed", extra={"error": str(e)})
             return 0
 
     async def is_token_revoked(self, jti: str, token_type: str = "access") -> bool:
@@ -428,7 +464,7 @@ class TokenRevocationService:
             key = f"revoked:{token_type}:{jti}"
             return await self.redis.exists(key)
         except Exception as e:
-            print(f"Token revocation check failed: {e}")
+            logger.warning("Token revocation check failed", extra={"error": str(e)})
             return False  # Fail open
 
     async def cleanup_expired_tokens(self, subject: str) -> int:
@@ -460,7 +496,7 @@ class TokenRevocationService:
             return cleaned_count
 
         except Exception as e:
-            print(f"Token cleanup failed: {e}")
+            logger.warning("Token cleanup failed", extra={"error": str(e)})
             return 0
 
     async def _update_token_status(self, jti: str, status: str):
@@ -480,7 +516,7 @@ class TokenRevocationService:
                     json.dumps(token_info)
                 )
         except Exception as e:
-            print(f"Token status update failed: {e}")
+            logger.warning("Token status update failed", extra={"error": str(e)})
 
     async def _cleanup_expired_revocations(self):
         """Clean up expired revocation records."""
@@ -489,7 +525,7 @@ class TokenRevocationService:
             # to periodically clean up old revocation records
             pass
         except Exception as e:
-            print(f"Revocation cleanup failed: {e}")
+            logger.warning("Revocation cleanup failed", extra={"error": str(e)})
 
 
 # Export the main classes
