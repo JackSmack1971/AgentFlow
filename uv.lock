@@ -87,7 +87,7 @@ requires-dist = [
     { name = "email-validator", specifier = "==2.2.0" },
     { name = "fakeredis", marker = "extra == 'dev'", specifier = "==2.31.0" },
     { name = "fastapi", specifier = "==0.115.12" },
-    { name = "fastapi-guard", specifier = "==3.0.2" },
+    { name = "fastapi-guard", specifier = "==4.0.3" },
     { name = "flake8", marker = "extra == 'dev'" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "hypothesis", marker = "extra == 'dev'" },
@@ -681,7 +681,7 @@ wheels = [
 
 [[package]]
 name = "fastapi-guard"
-version = "3.0.2"
+version = "4.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -693,9 +693,9 @@ dependencies = [
     { name = "requests" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/47/8b/546933a4b14d3d41506c31c036db7ed5ba568942a7eaae128e6f23417bfa/fastapi_guard-3.0.2.tar.gz", hash = "sha256:5e7e1fc154e9ca9b9f45050988bd47a09f08c423fabbc13cf1034a4a03adfc99", size = 40176, upload-time = "2025-07-23T07:52:43.405Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/3e/0375843197e97114776e793536e7f89947d73b835ff6d83e6e49576cde48/fastapi_guard-4.0.3.tar.gz", hash = "sha256:4e0c4896bb93c6d35f20432d02eab946029a75149a2bef4bf14f90928d1b5e50", size = 70025, upload-time = "2025-08-09T14:23:06.223Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4c/dc/06722a91d59322cbb9cee0901dcaff123c9c2656974c385f76c8df878fbc/fastapi_guard-3.0.2-py3-none-any.whl", hash = "sha256:c1efea19741d27b9f295e43089c70e55645d59aa9fbd0d9e4fd85c4d0d833f3d", size = 48268, upload-time = "2025-07-23T07:52:42.226Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/20/4347620d45961a8529cc889f612a44cfc63d59d2c68a142e4104e2296bef/fastapi_guard-4.0.3-py3-none-any.whl", hash = "sha256:2046f6f9ea30d03bcf18dd591130b9eb3784c8dd02ac7ca3c2082170b5a98bb0", size = 83543, upload-time = "2025-08-09T14:23:04.989Z" },
 ]
 
 [[package]]
