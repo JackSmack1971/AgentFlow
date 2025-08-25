@@ -8,6 +8,8 @@
 # 1. Clone and setup
 git clone <repository>
 cd agentflow
+# Install pip-tools for dependency management
+pip install pip-tools
 # Ensure your Python interpreter matches the version in `.python-version`
 ./scripts/setup.sh
 
