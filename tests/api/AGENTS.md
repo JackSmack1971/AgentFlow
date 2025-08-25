@@ -13,7 +13,7 @@ This document provides essential context for AI models working on API-specific t
     - Request/response validation with Pydantic models and structured logging verification
 
 ## 2. Core Technologies & Stack
-*   **Languages:** Python 3.10+ with async/await patterns, SQL for database validation
+*   **Languages:** Python 3.11+ with async/await patterns, SQL for database validation
 *   **Testing Framework:** 
     - pytest 7.x+ with pytest-asyncio for async endpoint testing
     - FastAPI TestClient for synchronous HTTP testing with dependency override support

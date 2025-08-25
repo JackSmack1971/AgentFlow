@@ -393,7 +393,7 @@ AgentFlow delivers a typed, production-grade agent platform unifying **LangGraph
 ## 9) Dependencies & Constraints
 
 * **Frameworks:** LangGraph, Pydantic-AI, Mem0, R2R, MCP.
-* **Infra:** **PostgreSQL 17.x**, **Redis 7.x**, **Qdrant (TLS)**, R2R service, FastAPI 0.115+, Python 3.10+.
+* **Infra:** **PostgreSQL 17.x**, **Redis 7.x**, **Qdrant (TLS)**, R2R service, FastAPI 0.115+, Python 3.11+.
 * **Frontend:** Next.js (App Router), React 18, TypeScript 5.x, Biome.
 * **Constraints:** Compose hygiene rules; TLS everywhere; no secrets in code; typed surfaces only.
 
