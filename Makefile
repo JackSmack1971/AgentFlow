@@ -1,6 +1,7 @@
 .PHONY: install fmt test deps-check
 
 install:
+	pip install pip-tools
 	pip install -e .
 
 fmt:
