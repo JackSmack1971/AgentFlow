@@ -22,7 +22,7 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "apps/api\\app\\config\\environments.py"
+                  "uri": "apps/api/app/config/environments.py"
                 },
                 "region": {
                   "startLine": 70
@@ -45,7 +45,7 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "apps/api\\app\\config\\environments.py"
+                  "uri": "apps/api/app/config/environments.py"
                 },
                 "region": {
                   "startLine": 112
@@ -68,7 +68,7 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "apps/api\\app\\config\\settings.py"
+                  "uri": "apps/api/app/config/settings.py"
                 },
                 "region": {
                   "startLine": 280
@@ -91,7 +91,7 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "apps/api\\app\\services\\secure_jwt.py"
+                  "uri": "apps/api/app/services/secure_jwt.py"
                 },
                 "region": {
                   "startLine": 265
@@ -114,7 +114,7 @@
             {
               "physicalLocation": {
                 "artifactLocation": {
-                  "uri": "apps/api\\app\\services\\secure_jwt.py"
+                  "uri": "apps/api/app/services/secure_jwt.py"
                 },
                 "region": {
                   "startLine": 276

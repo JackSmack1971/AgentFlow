@@ -1,6 +1,6 @@
 {
   "errors": [],
-  "generated_at": "2025-08-24T23:05:36Z",
+  "generated_at": "2025-08-25T14:50:17Z",
   "metrics": {
     "_totals": {
       "CONFIDENCE.HIGH": 2,
@@ -11,9 +11,9 @@
       "SEVERITY.LOW": 2,
       "SEVERITY.MEDIUM": 3,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 10439,
+      "loc": 10218,
       "nosec": 0,
-      "skipped_tests": 2
+      "skipped_tests": 1
     },
     "apps/__init__.py": {
       "CONFIDENCE.HIGH": 0,
@@ -28,7 +28,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\__init__.py": {
+    "apps/api/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -41,7 +41,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\__init__.py": {
+    "apps/api/app/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -54,7 +54,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\config.py": {
+    "apps/api/app/config.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -67,7 +67,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\config\\__init__.py": {
+    "apps/api/app/config/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -80,7 +80,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\config\\environments.py": {
+    "apps/api/app/config/environments.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 2,
@@ -93,7 +93,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\config\\settings.py": {
+    "apps/api/app/config/settings.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 1,
@@ -106,7 +106,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\core\\__init__.py": {
+    "apps/api/app/core/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -119,7 +119,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\core\\cache.py": {
+    "apps/api/app/core/cache.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -132,7 +132,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\core\\security_config.py": {
+    "apps/api/app/core/security_config.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -145,7 +145,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\core\\settings.py": {
+    "apps/api/app/core/settings.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -158,7 +158,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\database.py": {
+    "apps/api/app/database.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -171,7 +171,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\db\\__init__.py": {
+    "apps/api/app/db/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -184,7 +184,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\db\\base.py": {
+    "apps/api/app/db/base.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -197,7 +197,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\db\\models.py": {
+    "apps/api/app/db/models.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -210,7 +210,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\db\\seeds.py": {
+    "apps/api/app/db/seeds.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -223,7 +223,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\db\\session.py": {
+    "apps/api/app/db/session.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -236,7 +236,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\dependencies.py": {
+    "apps/api/app/dependencies.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -249,7 +249,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\deps\\__init__.py": {
+    "apps/api/app/deps/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -262,7 +262,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\deps\\http.py": {
+    "apps/api/app/deps/http.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -275,7 +275,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\errors.py": {
+    "apps/api/app/errors.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -288,7 +288,7 @@
       "nosec": 0,
       "skipped_tests": 1
     },
-    "apps/api\\app\\exceptions.py": {
+    "apps/api/app/exceptions.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -301,7 +301,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\incident_response\\security_playbooks.py": {
+    "apps/api/app/incident_response/security_playbooks.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -314,7 +314,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\main.py": {
+    "apps/api/app/main.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -327,7 +327,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\memory\\__init__.py": {
+    "apps/api/app/memory/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -340,7 +340,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\memory\\exceptions.py": {
+    "apps/api/app/memory/exceptions.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -353,7 +353,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\memory\\models.py": {
+    "apps/api/app/memory/models.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -366,7 +366,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\middleware\\__init__.py": {
+    "apps/api/app/middleware/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -379,7 +379,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\middleware\\audit.py": {
+    "apps/api/app/middleware/audit.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -392,7 +392,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\middleware\\body_size.py": {
+    "apps/api/app/middleware/body_size.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -405,7 +405,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\middleware\\correlation.py": {
+    "apps/api/app/middleware/correlation.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -418,7 +418,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\middleware\\errors.py": {
+    "apps/api/app/middleware/errors.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -431,7 +431,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\middleware\\security.py": {
+    "apps/api/app/middleware/security.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -444,7 +444,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\models\\__init__.py": {
+    "apps/api/app/models/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -457,7 +457,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\models\\auth.py": {
+    "apps/api/app/models/auth.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -470,7 +470,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\models\\base.py": {
+    "apps/api/app/models/base.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -483,7 +483,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\models\\cache.py": {
+    "apps/api/app/models/cache.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -496,7 +496,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\models\\health.py": {
+    "apps/api/app/models/health.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -509,7 +509,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\models\\rag.py": {
+    "apps/api/app/models/rag.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -522,7 +522,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\models\\schemas.py": {
+    "apps/api/app/models/schemas.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -535,7 +535,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\observability\\__init__.py": {
+    "apps/api/app/observability/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -548,7 +548,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\observability\\audit.py": {
+    "apps/api/app/observability/audit.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -561,7 +561,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\observability\\error_budget_manager.py": {
+    "apps/api/app/observability/error_budget_manager.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -574,7 +574,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\observability\\security_alerting.py": {
+    "apps/api/app/observability/security_alerting.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -587,7 +587,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\observability\\security_dashboards.py": {
+    "apps/api/app/observability/security_dashboards.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -600,7 +600,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\observability\\security_monitoring_config.py": {
+    "apps/api/app/observability/security_monitoring_config.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -613,7 +613,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\observability\\tracing.py": {
+    "apps/api/app/observability/tracing.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -626,7 +626,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\rate_limiter.py": {
+    "apps/api/app/rate_limiter.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -639,7 +639,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\routers\\__init__.py": {
+    "apps/api/app/routers/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -652,7 +652,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\routers\\agents.py": {
+    "apps/api/app/routers/agents.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -665,7 +665,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\routers\\auth.py": {
+    "apps/api/app/routers/auth.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -678,7 +678,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\routers\\cache_examples.py": {
+    "apps/api/app/routers/cache_examples.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -691,7 +691,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\routers\\health.py": {
+    "apps/api/app/routers/health.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -704,7 +704,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\routers\\memory.py": {
+    "apps/api/app/routers/memory.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -717,7 +717,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\routers\\rag.py": {
+    "apps/api/app/routers/rag.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -730,7 +730,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\routers\\security.py": {
+    "apps/api/app/routers/security.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -743,7 +743,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\routers\\workflow.py": {
+    "apps/api/app/routers/workflow.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -756,7 +756,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\__init__.py": {
+    "apps/api/app/services/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -769,7 +769,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\agents.py": {
+    "apps/api/app/services/agents.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -782,7 +782,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\auth.py": {
+    "apps/api/app/services/auth.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -795,7 +795,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\circuit_breaker.py": {
+    "apps/api/app/services/circuit_breaker.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -808,7 +808,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\graph_db.py": {
+    "apps/api/app/services/graph_db.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -821,7 +821,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\input_validation.py": {
+    "apps/api/app/services/input_validation.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -834,7 +834,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\memory.py": {
+    "apps/api/app/services/memory.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -847,7 +847,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\memory_items.py": {
+    "apps/api/app/services/memory_items.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -860,7 +860,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\otp_service.py": {
+    "apps/api/app/services/otp_service.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -873,7 +873,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\rag.py": {
+    "apps/api/app/services/rag.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -886,7 +886,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\rate_limiting_service.py": {
+    "apps/api/app/services/rate_limiting_service.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -899,7 +899,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\saga.py": {
+    "apps/api/app/services/saga.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -912,7 +912,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\secure_jwt.py": {
+    "apps/api/app/services/secure_jwt.py": {
       "CONFIDENCE.HIGH": 2,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -925,7 +925,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\secure_rag.py": {
+    "apps/api/app/services/secure_rag.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -938,7 +938,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\security_monitoring.py": {
+    "apps/api/app/services/security_monitoring.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -951,7 +951,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\token_store.py": {
+    "apps/api/app/services/token_store.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -964,7 +964,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\vector_db.py": {
+    "apps/api/app/services/vector_db.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -977,7 +977,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\services\\workflow.py": {
+    "apps/api/app/services/workflow.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -990,7 +990,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\utils\\__init__.py": {
+    "apps/api/app/utils/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1003,7 +1003,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\utils\\crypto.py": {
+    "apps/api/app/utils/crypto.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1016,7 +1016,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\utils\\encryption.py": {
+    "apps/api/app/utils/encryption.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1029,7 +1029,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\utils\\logging.py": {
+    "apps/api/app/utils/logging.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1042,7 +1042,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\utils\\metrics.py": {
+    "apps/api/app/utils/metrics.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1055,7 +1055,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\utils\\password.py": {
+    "apps/api/app/utils/password.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1068,7 +1068,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/api\\app\\utils\\rbac.py": {
+    "apps/api/app/utils/rbac.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1081,7 +1081,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\__init__.py": {
+    "apps/mcp/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1094,7 +1094,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\server.py": {
+    "apps/mcp/server.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1107,7 +1107,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\tools\\__init__.py": {
+    "apps/mcp/tools/__init__.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1120,7 +1120,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\tools\\middleware.py": {
+    "apps/mcp/tools/middleware.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1133,7 +1133,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\tools\\ping.py": {
+    "apps/mcp/tools/ping.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1146,7 +1146,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\tools\\rag_search.py": {
+    "apps/mcp/tools/rag_search.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1159,7 +1159,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\tools\\registry.py": {
+    "apps/mcp/tools/registry.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1172,7 +1172,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\tools\\schemas.py": {
+    "apps/mcp/tools/schemas.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1185,7 +1185,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\tools\\security.py": {
+    "apps/mcp/tools/security.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1198,7 +1198,7 @@
       "nosec": 0,
       "skipped_tests": 0
     },
-    "apps/mcp\\tools\\system.py": {
+    "apps/mcp/tools/system.py": {
       "CONFIDENCE.HIGH": 0,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -1210,84 +1210,6 @@
       "loc": 33,
       "nosec": 0,
       "skipped_tests": 0
-    },
-    "packages/__init__.py": {
-      "CONFIDENCE.HIGH": 0,
-      "CONFIDENCE.LOW": 0,
-      "CONFIDENCE.MEDIUM": 0,
-      "CONFIDENCE.UNDEFINED": 0,
-      "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
-      "SEVERITY.MEDIUM": 0,
-      "SEVERITY.UNDEFINED": 0,
-      "loc": 1,
-      "nosec": 0,
-      "skipped_tests": 0
-    },
-    "packages/r2r\\__init__.py": {
-      "CONFIDENCE.HIGH": 0,
-      "CONFIDENCE.LOW": 0,
-      "CONFIDENCE.MEDIUM": 0,
-      "CONFIDENCE.UNDEFINED": 0,
-      "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
-      "SEVERITY.MEDIUM": 0,
-      "SEVERITY.UNDEFINED": 0,
-      "loc": 26,
-      "nosec": 0,
-      "skipped_tests": 0
-    },
-    "packages/r2r\\client.py": {
-      "CONFIDENCE.HIGH": 0,
-      "CONFIDENCE.LOW": 0,
-      "CONFIDENCE.MEDIUM": 0,
-      "CONFIDENCE.UNDEFINED": 0,
-      "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
-      "SEVERITY.MEDIUM": 0,
-      "SEVERITY.UNDEFINED": 0,
-      "loc": 124,
-      "nosec": 0,
-      "skipped_tests": 1
-    },
-    "packages/r2r\\config.py": {
-      "CONFIDENCE.HIGH": 0,
-      "CONFIDENCE.LOW": 0,
-      "CONFIDENCE.MEDIUM": 0,
-      "CONFIDENCE.UNDEFINED": 0,
-      "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
-      "SEVERITY.MEDIUM": 0,
-      "SEVERITY.UNDEFINED": 0,
-      "loc": 28,
-      "nosec": 0,
-      "skipped_tests": 0
-    },
-    "packages/r2r\\errors.py": {
-      "CONFIDENCE.HIGH": 0,
-      "CONFIDENCE.LOW": 0,
-      "CONFIDENCE.MEDIUM": 0,
-      "CONFIDENCE.UNDEFINED": 0,
-      "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
-      "SEVERITY.MEDIUM": 0,
-      "SEVERITY.UNDEFINED": 0,
-      "loc": 21,
-      "nosec": 0,
-      "skipped_tests": 0
-    },
-    "packages/r2r\\models.py": {
-      "CONFIDENCE.HIGH": 0,
-      "CONFIDENCE.LOW": 0,
-      "CONFIDENCE.MEDIUM": 0,
-      "CONFIDENCE.UNDEFINED": 0,
-      "SEVERITY.HIGH": 0,
-      "SEVERITY.LOW": 0,
-      "SEVERITY.MEDIUM": 0,
-      "SEVERITY.UNDEFINED": 0,
-      "loc": 21,
-      "nosec": 0,
-      "skipped_tests": 0
     }
   },
   "results": [
@@ -1295,7 +1217,7 @@
       "code": "69                 \"log_level\": \"INFO\",\n70                 \"host\": \"0.0.0.0\",\n71                 \"port\": 8000,\n72                 \"environment\": \"staging\",\n73                 \"max_body_size\": 5 * 1024 * 1024,  # 5MB for staging\n74             },\n75             \"security\": {\n76                 \"cors_origins\": [\n77                     \"https://staging.agentflow.com\",\n78                     \"https://admin.staging.agentflow.com\"\n79                 ],\n",
       "col_offset": 24,
       "end_col_offset": 33,
-      "filename": "apps/api\\app\\config\\environments.py",
+      "filename": "apps/api/app/config/environments.py",
       "issue_confidence": "MEDIUM",
       "issue_cwe": {
         "id": 605,
@@ -1323,7 +1245,7 @@
       "code": "111                 \"log_level\": \"WARNING\",\n112                 \"host\": \"0.0.0.0\",\n113                 \"port\": 8000,\n114                 \"environment\": \"prod\",\n115                 \"max_body_size\": 2 * 1024 * 1024,  # 2MB for prod\n116             },\n117             \"security\": {\n118                 \"cors_origins\": [\n119                     \"https://agentflow.com\",\n120                     \"https://admin.agentflow.com\"\n121                 ],\n",
       "col_offset": 24,
       "end_col_offset": 33,
-      "filename": "apps/api\\app\\config\\environments.py",
+      "filename": "apps/api/app/config/environments.py",
       "issue_confidence": "MEDIUM",
       "issue_cwe": {
         "id": 605,
@@ -1351,7 +1273,7 @@
       "code": "279     # API Configuration\n280     host: str = Field(default=\"0.0.0.0\", description=\"Server host\")\n281     port: int = Field(default=8000, description=\"Server port\")\n",
       "col_offset": 30,
       "end_col_offset": 39,
-      "filename": "apps/api\\app\\config\\settings.py",
+      "filename": "apps/api/app/config/settings.py",
       "issue_confidence": "MEDIUM",
       "issue_cwe": {
         "id": 605,
@@ -1371,7 +1293,7 @@
       "code": "264                     flags.append(\"rapid_validation\")\n265             except Exception:\n266                 pass\n267 \n",
       "col_offset": 12,
       "end_col_offset": 20,
-      "filename": "apps/api\\app\\services\\secure_jwt.py",
+      "filename": "apps/api/app/services/secure_jwt.py",
       "issue_confidence": "HIGH",
       "issue_cwe": {
         "id": 703,
@@ -1392,7 +1314,7 @@
       "code": "275                 )\n276             except Exception:\n277                 pass\n278 \n",
       "col_offset": 12,
       "end_col_offset": 20,
-      "filename": "apps/api\\app\\services\\secure_jwt.py",
+      "filename": "apps/api/app/services/secure_jwt.py",
       "issue_confidence": "HIGH",
       "issue_cwe": {
         "id": 703,
